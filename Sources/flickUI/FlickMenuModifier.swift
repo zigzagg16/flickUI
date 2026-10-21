@@ -372,7 +372,7 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
             let layout = layouts[edge]
             let restingFrame = layout.indicatorFrame(for: edge)
             let index = min(session?.highlightedIndex ?? machine.selectedIndex, data.count - 1)
-            let placement = openPlacement(symbolFrame: symbolFrame)
+            let placement = openPlacement(symbolFrame: symbolFrame, itemLength: layout.itemLength)
                 ?? restingPlacement(edge: edge, frame: restingFrame, margin: layout.indicatorMargin)
             let iconView = Image(systemName: systemImage(element(at: index)))
                 .contentTransition(.symbolEffect(.replace))
@@ -393,7 +393,9 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
                 .contentShape(Rectangle())
                 .onTapGesture { send(.tapIndicator, animation: openAnimation) }
                 .position(placement.center)
-                .animation(indicatorAnimation, value: placement)
+                // Opening, closing and choosing animate through `send`; while the finger
+                // moves the indicator follows it without animation.
+                .animation(indicatorAnimation, value: machine.indicator)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text("Menu"))
                 .accessibilityValue(Text(title(element(at: index))))
@@ -403,14 +405,17 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
         }
     }
 
-    /// A bead centred on the highlighted symbol.
-    private func openPlacement(symbolFrame: CGRect?) -> IndicatorPlacement? {
-        guard machine.isOpen, let symbolFrame, !symbolFrame.isEmpty else { return nil }
-        let side = max(symbolFrame.width, symbolFrame.height) + 22
-        return IndicatorPlacement(
-            center: CGPoint(x: symbolFrame.midX, y: symbolFrame.midY),
-            size: CGSize(width: side, height: side)
-        )
+    /// A bead on the line of symbols, under the finger: it slides continuously from
+    /// symbol to symbol as the finger moves.
+    private func openPlacement(symbolFrame: CGRect?, itemLength: CGFloat) -> IndicatorPlacement? {
+        guard let session = machine.session, let main = machine.trackingPosition,
+              let symbolFrame, !symbolFrame.isEmpty else { return nil }
+        let side = min(itemLength * 0.8, 48)
+        let center = switch session.edge.mainAxis {
+        case .vertical: CGPoint(x: symbolFrame.midX, y: main)
+        case .horizontal: CGPoint(x: main, y: symbolFrame.midY)
+        }
+        return IndicatorPlacement(center: center, size: CGSize(width: side, height: side))
     }
 
     /// Against the edge, or across the screen if the rows report no symbol.

@@ -56,6 +56,18 @@ struct FlickMenuMachineTests {
         #expect(isApproximately(machine.indicator.position, 359))
     }
 
+    @Test func trackingPositionFollowsTheFingerWithinTheItems() {
+        var machine = makeMachine()
+        #expect(machine.trackingPosition == nil)
+        machine.send(.began(edge: .left, position: 300))
+        #expect(machine.trackingPosition == 300)
+        machine.send(.moved(position: 310, velocity: 0))
+        #expect(isApproximately(machine.trackingPosition ?? 0, 310))
+        // Past the first item, it stays on its centre.
+        machine.send(.moved(position: 250, velocity: 0))
+        #expect(isApproximately(machine.trackingPosition ?? 0, (machine.session?.menuOffset ?? 0) + 30))
+    }
+
     @Test func selectedItemStartsUnderTheFinger() {
         var machine = makeMachine(selectedIndex: 3)
         #expect(machine.send(.began(edge: .right, position: 500)) == [.opened(.right), .highlighted(3)])

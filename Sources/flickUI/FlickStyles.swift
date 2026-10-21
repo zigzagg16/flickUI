@@ -122,6 +122,9 @@ public struct FlickMorphingIndicatorStyle: FlickIndicatorStyle {
     public func makeBody(configuration: Configuration) -> some View {
         let form = morph.form(isOpen: configuration.isOpen, velocity: configuration.velocity)
         let shape = FlickMorphingShape(edge: configuration.edge, form: form)
+        // Only the change between resting and open springs. The stretch follows the
+        // finger's speed directly, so the shape never wobbles on its own.
+        let state = configuration.isOpen ? morph.open : morph.resting
         let icon = configuration.icon
             .font(.system(size: 18, weight: .semibold))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -134,7 +137,7 @@ public struct FlickMorphingIndicatorStyle: FlickIndicatorStyle {
                     .background(shape.fill(tint ?? Color(red: 0.23, green: 0.60, blue: 0.85)))
             }
         }
-        .animation(.spring(duration: 0.45, bounce: morph.bounce), value: form)
+        .animation(.spring(duration: 0.45, bounce: morph.bounce), value: state)
     }
 }
 

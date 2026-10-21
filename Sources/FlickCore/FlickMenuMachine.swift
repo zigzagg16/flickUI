@@ -166,6 +166,16 @@ public struct FlickMenuMachine: Equatable, Sendable {
         return geometry.itemCenter(at: session.highlightedIndex, menuOffset: session.menuOffset, edge: session.edge)
     }
 
+    /// Where the finger is in the open menu along the main axis, kept between the
+    /// centres of the first and last items. Unlike ``openIndicatorPosition`` it moves
+    /// continuously, so an indicator placed here follows the finger.
+    public var trackingPosition: CGFloat? {
+        guard let session, geometry.itemCount > 0 else { return nil }
+        let length = geometry.itemLength[session.edge]
+        let progress = min(max(session.progress, 0.5), CGFloat(geometry.itemCount) - 0.5)
+        return session.menuOffset + progress * length
+    }
+
     /// Replaces the configuration. An open menu is kept open.
     /// Changing the home edge or position sends the indicator home.
     public mutating func update(configuration: FlickMenuConfiguration) {
