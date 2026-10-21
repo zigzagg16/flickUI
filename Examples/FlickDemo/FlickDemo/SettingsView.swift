@@ -91,5 +91,26 @@ struct EdgeAppearanceEditor: View {
         Picker("Boomerang", selection: $appearance.boomerang) {
             ForEach(BoomerangChoice.allCases) { Text($0.rawValue.capitalized).tag($0) }
         }
+        EmphasisEditor(title: "Highlighted item", emphasis: $appearance.highlight)
+        EmphasisEditor(title: "Selected item", emphasis: $appearance.selection)
+    }
+}
+
+struct EmphasisEditor: View {
+    let title: String
+    @Binding var emphasis: EmphasisChoice
+
+    var body: some View {
+        Picker("\(title) effect", selection: $emphasis.effect) {
+            ForEach(EffectChoice.allCases) { Text($0.title).tag($0) }
+        }
+        if emphasis.effect != .none {
+            Toggle("Repeat", isOn: $emphasis.repeats)
+        }
+        Toggle("Filled symbol", isOn: $emphasis.fills)
+        Toggle("Tint", isOn: $emphasis.tints)
+        if emphasis.tints {
+            ColorPicker("\(title) colour", selection: $emphasis.tint, supportsOpacity: false)
+        }
     }
 }

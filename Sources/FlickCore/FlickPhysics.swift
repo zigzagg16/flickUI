@@ -26,21 +26,29 @@ public struct FlickPhysics: Hashable, Sendable {
     public var overscroll: Overscroll
     /// The deceleration rate used to project release velocity, as in `UIScrollView`.
     public var decelerationRate: CGFloat
+    /// Whether every item stays reachable wherever the swipe starts. When the finger
+    /// starts close to the end of the edge, tracking in that direction speeds up just
+    /// enough to reach the last item before the safe area ends. `trackingRatio` is
+    /// the minimum and is used as is whenever there is room.
+    public var reachesAllItems: Bool
 
     public init(
         trackingRatio: CGFloat = 2,
         overscroll: Overscroll = .rubberBand(stiffness: 0.55),
-        decelerationRate: CGFloat = 0.998
+        decelerationRate: CGFloat = 0.998,
+        reachesAllItems: Bool = true
     ) {
         self.trackingRatio = trackingRatio
         self.overscroll = overscroll
         self.decelerationRate = decelerationRate
+        self.reachesAllItems = reachesAllItems
     }
 
     /// The default: CariocaMenu's tracking with rubber-banded bounds.
     public static let fluid = FlickPhysics()
-    /// CariocaMenu's exact behaviour: 2× tracking and an unbounded menu.
-    public static let carioca = FlickPhysics(trackingRatio: 2, overscroll: .unbounded)
+    /// CariocaMenu's exact behaviour: 2× tracking, an unbounded menu, and items
+    /// that can be out of reach near the ends of the edge.
+    public static let carioca = FlickPhysics(trackingRatio: 2, overscroll: .unbounded, reachesAllItems: false)
     /// Faster tracking that stops hard at the bounds.
     public static let snappy = FlickPhysics(trackingRatio: 2.5, overscroll: .clamped, decelerationRate: 0.99)
     /// A static menu that the finger slides over.
@@ -113,6 +121,19 @@ public enum FlickTracking {
             - itemLength * CGFloat(anchorIndex)
             - itemLength / 2
             - (trackingRatio - 1) * (current - start)
+    }
+
+    /// The finger's position in the menu, in items, before overscroll is applied:
+    /// `k + 0.5` is the centre of item `k`. The anchor item starts under the finger.
+    public static func progress(
+        start: CGFloat,
+        current: CGFloat,
+        anchorIndex: Int,
+        itemLength: CGFloat,
+        trackingRatio: CGFloat
+    ) -> CGFloat {
+        guard itemLength > 0 else { return CGFloat(anchorIndex) + 0.5 }
+        return CGFloat(anchorIndex) + 0.5 + trackingRatio * (current - start) / itemLength
     }
 
     /// The unclamped index under `position`. It can be negative or past the last item.

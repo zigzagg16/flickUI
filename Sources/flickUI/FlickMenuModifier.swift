@@ -2,15 +2,6 @@
 import FlickCore
 import SwiftUI
 
-/// Information about a row, passed to the row builder of `flickMenu`.
-public struct FlickMenuRowContext: Sendable {
-    public let index: Int
-    public let isHighlighted: Bool
-    public let isSelected: Bool
-    /// The physical edge the menu was opened from. The indicator sits on the opposite side.
-    public let edge: FlickScreenEdge
-}
-
 extension View {
     /// Adds a menu that opens with a swipe from a screen edge.
     ///
@@ -18,35 +9,43 @@ extension View {
     /// the items, and lifting the finger chooses one. Tapping the indicator opens the
     /// menu without a swipe.
     ///
+    /// Every item is an SF Symbol with a title, so the menu can animate its symbols.
+    /// Key paths work for both closures:
+    ///
+    /// ```swift
+    /// .flickMenu(Tab.allCases, selection: $tab, title: \.title, systemImage: \.symbol)
+    /// ```
+    ///
     /// - Parameters:
     ///   - data: The menu items.
     ///   - selection: The selected item's identifier.
     ///   - edges: The edges a swipe can start from.
-    ///   - row: The content of each row.
-    ///   - icon: The content of the indicator for an item.
-    public func flickMenu<Data, Row, Icon>(
+    ///   - title: The title of an item.
+    ///   - systemImage: The name of an item's SF Symbol.
+    public func flickMenu<Data>(
         _ data: Data,
         selection: Binding<Data.Element.ID>,
         edges: FlickEdgeSet = .horizontal,
-        @ViewBuilder row: @escaping (Data.Element, FlickMenuRowContext) -> Row,
-        @ViewBuilder icon: @escaping (Data.Element) -> Icon
+        title: @escaping (Data.Element) -> String,
+        systemImage: @escaping (Data.Element) -> String
     ) -> some View
-    where Data: RandomAccessCollection, Data.Element: Identifiable, Row: View, Icon: View {
-        modifier(FlickMenuModifier(data: data, selection: selection, edges: edges, row: row, icon: icon))
+    where Data: RandomAccessCollection, Data.Element: Identifiable {
+        modifier(FlickMenuModifier(data: data, selection: selection, edges: edges, title: title, systemImage: systemImage))
     }
 }
 
-struct FlickMenuModifier<Data, Row, Icon>: ViewModifier
-where Data: RandomAccessCollection, Data.Element: Identifiable, Row: View, Icon: View {
+struct FlickMenuModifier<Data>: ViewModifier
+where Data: RandomAccessCollection, Data.Element: Identifiable {
     let data: Data
     @Binding var selection: Data.Element.ID
     let edges: FlickEdgeSet
-    let row: (Data.Element, FlickMenuRowContext) -> Row
-    let icon: (Data.Element) -> Icon
+    let title: (Data.Element) -> String
+    let systemImage: (Data.Element) -> String
 
     @Environment(\.flickMenuSettings) private var settings
     @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var machine = FlickMenuMachine(
         configuration: FlickMenuConfiguration(),
@@ -166,6 +165,14 @@ where Data: RandomAccessCollection, Data.Element: Identifiable, Row: View, Icon:
             ?? AnyFlickMenuBackgroundStyle(FlickMaterialBackgroundStyle())
     }
 
+    private func highlightEmphasis(for edge: FlickScreenEdge) -> FlickMenuItemEmphasis {
+        settings.highlight.resolved(isRightToLeft: isRightToLeft)[edge]
+    }
+
+    private func selectionEmphasis(for edge: FlickScreenEdge) -> FlickMenuItemEmphasis {
+        settings.selection.resolved(isRightToLeft: isRightToLeft)[edge]
+    }
+
     // MARK: Events
 
     private func edgeGesture(_ edge: FlickScreenEdge) -> FlickEdgePanGesture {
@@ -254,9 +261,21 @@ where Data: RandomAccessCollection, Data.Element: Identifiable, Row: View, Icon:
 
         ZStack(alignment: .topLeading) {
             if let session = machine.session {
-                menu(for: session)
+                background(for: session)
             }
-            indicator
+            // The indicator is drawn behind the rows: while the menu is open it sits
+            // under the highlighted item's symbol instead of repeating it.
+            ZStack(alignment: .topLeading) {
+                if let session = machine.session {
+                    menu(for: session)
+                }
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+            .backgroundPreferenceValue(FlickHighlightedSymbolKey.self) { anchor in
+                GeometryReader { local in
+                    indicator(symbolFrame: anchor.map { local[$0] })
+                }
+            }
         }
         .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
         .onChange(of: geometry, initial: true) { _, newValue in
@@ -267,7 +286,17 @@ where Data: RandomAccessCollection, Data.Element: Identifiable, Row: View, Icon:
         }
     }
 
-    @ViewBuilder
+    private func background(for session: FlickSession) -> some View {
+        let geometry = machine.geometry
+        return backgroundStyle(for: session.edge)
+            .makeBody(configuration: FlickMenuBackgroundStyleConfiguration(edge: session.edge))
+            .frame(width: geometry.containerSize.width, height: geometry.containerSize.height)
+            .contentShape(Rectangle())
+            .onTapGesture { send(.dismiss, animation: closeAnimation) }
+            .transition(.opacity)
+            .accessibilityHidden(true)
+    }
+
     private func menu(for session: FlickSession) -> some View {
         let geometry = machine.geometry
         let edge = session.edge
@@ -280,15 +309,7 @@ where Data: RandomAccessCollection, Data.Element: Identifiable, Row: View, Icon:
                 .frame(width: isVertical ? cross : itemLength, height: isVertical ? itemLength : cross)
         }
 
-        backgroundStyle(for: edge)
-            .makeBody(configuration: FlickMenuBackgroundStyleConfiguration(edge: edge))
-            .frame(width: geometry.containerSize.width, height: geometry.containerSize.height)
-            .contentShape(Rectangle())
-            .onTapGesture { send(.dismiss, animation: closeAnimation) }
-            .transition(.opacity)
-            .accessibilityHidden(true)
-
-        Group {
+        return Group {
             if isVertical {
                 VStack(spacing: 0) { rows }
             } else {
@@ -300,80 +321,114 @@ where Data: RandomAccessCollection, Data.Element: Identifiable, Row: View, Icon:
             x: isVertical ? cross / 2 : session.menuOffset + menuLength / 2,
             y: isVertical ? session.menuOffset + menuLength / 2 : cross / 2
         )
+        .environment(\.colorScheme, backgroundStyle(for: edge).contentColorScheme ?? colorScheme)
         .transition(.opacity.combined(with: .scale(scale: 0.96)))
     }
 
     private func rowView(at index: Int, session: FlickSession) -> some View {
         let edge = session.edge
-        let layout = layouts[edge]
-        let context = FlickMenuRowContext(
-            index: index,
-            isHighlighted: index == session.highlightedIndex,
-            isSelected: index == machine.selectedIndex,
-            edge: edge
+        let item = element(at: index)
+        let isHighlighted = index == session.highlightedIndex
+        let isSelected = index == machine.selectedIndex
+        let label = FlickMenuItemLabel(
+            title: title(item),
+            systemImage: systemImage(item),
+            isHighlighted: isHighlighted,
+            isSelected: isSelected,
+            highlight: highlightEmphasis(for: edge),
+            selection: selectionEmphasis(for: edge)
         )
-        // Along the top and bottom edges, rows are narrow columns: stack labels vertically.
-        let label = row(element(at: index), context)
-            .labelStyle(FlickRowLabelStyle(isCompact: edge.mainAxis == .horizontal))
-            .environment(\.layoutDirection, layoutDirection)
+        .labelStyle(FlickRowLabelStyle(edge: edge))
+        .environment(\.layoutDirection, layoutDirection)
         let configuration = FlickMenuRowStyleConfiguration(
             label: FlickMenuRowStyleConfiguration.Label(content: AnyView(label)),
             index: index,
-            isHighlighted: context.isHighlighted,
-            isSelected: context.isSelected,
-            distance: machine.geometry.distance(
-                ofItem: index,
-                from: session.current,
-                menuOffset: session.menuOffset,
-                edge: edge
-            ),
+            title: title(item),
+            systemImage: systemImage(item),
+            isHighlighted: isHighlighted,
+            isSelected: isSelected,
+            distance: session.progress - (CGFloat(index) + 0.5),
             edge: edge
         )
         return rowStyle(for: edge)
             .makeBody(configuration: configuration)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: edge.indicatorSideAlignment)
-            // Keep labels clear of the indicator, which sits on this side while open.
-            .padding(edge.indicatorSideEdges, layout.indicatorSize.width + layout.indicatorMargin + 12)
+            // Keep labels clear of the far side's safe area.
+            .padding(edge.indicatorSideEdges, machine.geometry.safeAreaInsets[edge.opposite] + 28)
             .contentShape(Rectangle())
             .onTapGesture { send(.chooseItem(index), animation: closeAnimation) }
             .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(context.isSelected ? [.isButton, .isSelected] : .isButton)
+            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
+    /// The indicator. While the menu is open it sits under the highlighted item's
+    /// symbol, whose frame comes from the rows; otherwise it rests against its edge.
     @ViewBuilder
-    private var indicator: some View {
+    private func indicator(symbolFrame: CGRect?) -> some View {
         let geometry = machine.geometry
         if geometry.itemCount > 0, !data.isEmpty, geometry.containerSize != .zero {
             let session = machine.session
             let edge = session?.edge ?? machine.indicator.edge
             let layout = layouts[edge]
-            let frame = layout.indicatorFrame(for: edge)
-            let placement = geometry.indicatorPlacement(for: edge, indicatorSize: frame, margin: layout.indicatorMargin)
-            let main = machine.openIndicatorPosition ?? machine.indicator.position
-            let distance = session == nil ? placement.resting : placement.traversed
-            let point = edge.point(main: main, distanceFromEdge: distance, in: geometry.containerSize)
+            let restingFrame = layout.indicatorFrame(for: edge)
             let index = min(session?.highlightedIndex ?? machine.selectedIndex, data.count - 1)
-            let iconView = icon(element(at: index)).environment(\.layoutDirection, layoutDirection)
+            let placement = openPlacement(symbolFrame: symbolFrame)
+                ?? restingPlacement(edge: edge, frame: restingFrame, margin: layout.indicatorMargin)
+            let iconView = Image(systemName: systemImage(element(at: index)))
+                .contentTransition(.symbolEffect(.replace))
+                // Under the menu, the item's own symbol shows on top.
+                .opacity(session == nil ? 1 : 0)
+                .environment(\.layoutDirection, layoutDirection)
             let configuration = FlickIndicatorStyleConfiguration(
                 icon: FlickIndicatorStyleConfiguration.Icon(content: AnyView(iconView)),
+                systemImage: systemImage(element(at: index)),
                 edge: edge,
-                isOpen: session != nil
+                isOpen: session != nil,
+                velocity: session?.velocity ?? 0
             )
 
             indicatorStyle(for: edge)
                 .makeBody(configuration: configuration)
-                .frame(width: frame.width, height: frame.height)
+                .frame(width: placement.size.width, height: placement.size.height)
                 .contentShape(Rectangle())
                 .onTapGesture { send(.tapIndicator, animation: openAnimation) }
-                .position(point)
-                .animation(indicatorAnimation, value: point)
+                .position(placement.center)
+                .animation(indicatorAnimation, value: placement)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text("Menu"))
+                .accessibilityValue(Text(title(element(at: index))))
                 .accessibilityAddTraits(.isButton)
                 .accessibilityAction { send(.tapIndicator, animation: openAnimation) }
                 .accessibilityAdjustableAction { direction in adjustSelection(direction) }
         }
     }
+
+    /// A bead centred on the highlighted symbol.
+    private func openPlacement(symbolFrame: CGRect?) -> IndicatorPlacement? {
+        guard machine.isOpen, let symbolFrame, !symbolFrame.isEmpty else { return nil }
+        let side = max(symbolFrame.width, symbolFrame.height) + 22
+        return IndicatorPlacement(
+            center: CGPoint(x: symbolFrame.midX, y: symbolFrame.midY),
+            size: CGSize(width: side, height: side)
+        )
+    }
+
+    /// Against the edge, or across the screen if the rows report no symbol.
+    private func restingPlacement(edge: FlickScreenEdge, frame: CGSize, margin: CGFloat) -> IndicatorPlacement {
+        let geometry = machine.geometry
+        let placement = geometry.indicatorPlacement(for: edge, indicatorSize: frame, margin: margin)
+        let main = machine.openIndicatorPosition ?? machine.indicator.position
+        let distance = machine.isOpen ? placement.traversed : placement.resting
+        return IndicatorPlacement(
+            center: edge.point(main: main, distanceFromEdge: distance, in: geometry.containerSize),
+            size: frame
+        )
+    }
+}
+
+private struct IndicatorPlacement: Equatable {
+    var center: CGPoint
+    var size: CGSize
 }
 
 /// Counters that trigger haptic feedback when they change.

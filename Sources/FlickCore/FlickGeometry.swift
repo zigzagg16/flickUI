@@ -68,9 +68,66 @@ public struct FlickGeometry: Equatable, Sendable {
             current: current,
             anchorIndex: anchorIndex,
             itemLength: itemLength[edge],
-            trackingRatio: physics.trackingRatio
+            trackingRatio: trackingRatio(for: edge, start: start, current: current, anchorIndex: anchorIndex, physics: physics)
         )
         return physics.constrain(raw, to: menuOffsetRange(for: edge), dimension: mainLength(for: edge))
+    }
+
+    /// The finger's position in the menu, in items, from how far it has travelled
+    /// since the swipe began. See ``FlickTracking/progress(start:current:anchorIndex:itemLength:trackingRatio:)``.
+    ///
+    /// Unlike the item under the finger, it does not depend on overscroll: a menu held
+    /// back at the screen's bounds never makes items harder to reach.
+    public func progress(
+        for edge: FlickScreenEdge,
+        start: CGFloat,
+        current: CGFloat,
+        anchorIndex: Int,
+        physics: FlickPhysics
+    ) -> CGFloat {
+        FlickTracking.progress(
+            start: start,
+            current: current,
+            anchorIndex: anchorIndex,
+            itemLength: itemLength[edge],
+            trackingRatio: trackingRatio(for: edge, start: start, current: current, anchorIndex: anchorIndex, physics: physics)
+        )
+    }
+
+    /// The tracking ratio for the direction the finger has moved in.
+    ///
+    /// It is the physics' ratio, raised when ``FlickPhysics/reachesAllItems`` is on and
+    /// the room left between the start and the safe area is too short to reach the
+    /// first or last item at that ratio. The finger reaches the end item's centre half
+    /// an item before the safe area ends.
+    public func trackingRatio(
+        for edge: FlickScreenEdge,
+        start: CGFloat,
+        current: CGFloat,
+        anchorIndex: Int,
+        physics: FlickPhysics
+    ) -> CGFloat {
+        let ratio = physics.trackingRatio
+        let length = itemLength[edge]
+        guard physics.reachesAllItems, length > 0, current != start else { return ratio }
+        let insets = safeAreaInsets.along(edge.mainAxis)
+        let itemsToReach: CGFloat
+        let room: CGFloat
+        let remaining: CGFloat
+        if current > start {
+            itemsToReach = CGFloat(itemCount - 1 - anchorIndex)
+            room = mainLength(for: edge) - insets.end - length / 2 - start
+            remaining = mainLength(for: edge) - start
+        } else {
+            itemsToReach = CGFloat(anchorIndex)
+            room = start - insets.start - length / 2
+            remaining = start
+        }
+        guard itemsToReach > 0 else { return ratio }
+        // A swipe that starts in the safe-area inset, past the reach point, gets up to
+        // half the distance left to the container's end.
+        let usable = max(room, min(remaining / 2, length / 4), 1)
+        return max(ratio, itemsToReach * length / usable)
     }
 
     /// The item under a main-axis position, or `nil` when there are no items.

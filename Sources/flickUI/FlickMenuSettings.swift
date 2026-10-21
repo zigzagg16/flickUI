@@ -70,6 +70,8 @@ struct FlickMenuSettings {
     var indicatorStyle = FlickEdgeSettings<AnyFlickIndicatorStyle?>(nil)
     var rowStyle = FlickEdgeSettings<AnyFlickMenuRowStyle?>(nil)
     var backgroundStyle = FlickEdgeSettings<AnyFlickMenuBackgroundStyle?>(nil)
+    var highlight = FlickEdgeSettings(FlickMenuItemEmphasis.highlighted)
+    var selection = FlickEdgeSettings(FlickMenuItemEmphasis.selected)
     var feedback = FlickMenuFeedback.default
     var defersSystemGestures = true
     var onEvent: (@MainActor (FlickMenuEvent) -> Void)?
@@ -106,6 +108,22 @@ extension View {
     public func flickMenuBackground<S: FlickMenuBackgroundStyle>(_ style: S, edges: FlickEdgeSet = .all) -> some View {
         let erased = AnyFlickMenuBackgroundStyle(style)
         return transformEnvironment(\.flickMenuSettings) { $0.backgroundStyle.set(erased, for: edges) }
+    }
+
+    /// How the highlighted item looks, for all edges or only some. By default its
+    /// symbol is filled and bounces once.
+    ///
+    /// ```swift
+    /// .flickMenuHighlight(FlickMenuItemEmphasis(tint: .yellow, symbolEffect: .wiggle))
+    /// ```
+    public func flickMenuHighlight(_ emphasis: FlickMenuItemEmphasis, edges: FlickEdgeSet = .all) -> some View {
+        transformEnvironment(\.flickMenuSettings) { $0.highlight.set(emphasis, for: edges) }
+    }
+
+    /// How the selected item looks while the menu is open, for all edges or only some.
+    /// The highlight takes precedence when the selected item is also highlighted.
+    public func flickMenuSelection(_ emphasis: FlickMenuItemEmphasis, edges: FlickEdgeSet = .all) -> some View {
+        transformEnvironment(\.flickMenuSettings) { $0.selection.set(emphasis, for: edges) }
     }
 
     /// How the menu follows the finger, for all edges or only some.

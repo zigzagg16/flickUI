@@ -2,8 +2,48 @@ import flickUI
 import SwiftUI
 
 enum IndicatorChoice: String, CaseIterable, Identifiable {
-    case automatic, glass, bubble, capsule
+    case automatic, drop, squircle, liquid, bubble, glass, capsule
     var id: Self { self }
+}
+
+enum EffectChoice: String, CaseIterable, Identifiable {
+    case none, bounce, pulse, wiggle, breathe, rotate, scale, variableColor
+    var id: Self { self }
+
+    var title: String {
+        self == .variableColor ? "Variable colour" : rawValue.capitalized
+    }
+
+    func effect(repeating: Bool) -> FlickSymbolEffect {
+        let effect: FlickSymbolEffect = switch self {
+        case .none: .none
+        case .bounce: .bounce
+        case .pulse: .pulse
+        case .wiggle: .wiggle
+        case .breathe: .breathe
+        case .rotate: .rotate
+        case .scale: .scale
+        case .variableColor: .variableColor
+        }
+        return repeating ? effect.repeating : effect
+    }
+}
+
+/// How the highlighted or selected item looks.
+struct EmphasisChoice: Equatable {
+    var effect = EffectChoice.none
+    var repeats = false
+    var tints = false
+    var tint = Color.yellow
+    var fills = false
+
+    var emphasis: FlickMenuItemEmphasis {
+        FlickMenuItemEmphasis(
+            tint: tints ? tint : nil,
+            symbolVariant: fills ? .fill : nil,
+            symbolEffect: effect.effect(repeating: repeats)
+        )
+    }
 }
 
 enum RowChoice: String, CaseIterable, Identifiable {
@@ -66,6 +106,8 @@ struct EdgeAppearance: Equatable {
     var physics = PhysicsChoice.fluid
     var trackingRatio = 2.0
     var boomerang = BoomerangChoice.stay
+    var highlight = EmphasisChoice(effect: .bounce, fills: true)
+    var selection = EmphasisChoice()
 }
 
 struct DemoSettings: Equatable {
@@ -77,12 +119,14 @@ struct DemoSettings: Equatable {
     /// When on, the top and bottom edges use `ends` instead of `sides`.
     var customizesEnds = true
     var ends = EdgeAppearance(
-        indicator: .bubble,
+        indicator: .liquid,
         tint: .pink,
         row: .dock,
         background: .gradient,
         trackingRatio: 3,
-        boomerang: .origin
+        boomerang: .origin,
+        highlight: EmphasisChoice(effect: .wiggle, tints: true, tint: .yellow, fills: true),
+        selection: EmphasisChoice(effect: .breathe, repeats: true)
     )
     var feedback = FeedbackChoice.default
 
@@ -101,6 +145,9 @@ struct DemoIndicatorStyle: FlickIndicatorStyle {
     func makeBody(configuration: Configuration) -> some View {
         switch choice {
         case .automatic: FlickAutomaticIndicatorStyle().makeBody(configuration: configuration)
+        case .drop: FlickMorphingIndicatorStyle(.drop, tint: tint).makeBody(configuration: configuration)
+        case .squircle: FlickMorphingIndicatorStyle(.squircle, tint: tint).makeBody(configuration: configuration)
+        case .liquid: FlickMorphingIndicatorStyle(.liquid, tint: tint).makeBody(configuration: configuration)
         case .glass: FlickGlassIndicatorStyle(tint: tint.opacity(0.4)).makeBody(configuration: configuration)
         case .bubble: FlickBubbleIndicatorStyle(tint: tint).makeBody(configuration: configuration)
         case .capsule: FlickCapsuleIndicatorStyle(tint: tint).makeBody(configuration: configuration)
@@ -123,6 +170,15 @@ struct DemoRowStyle: FlickMenuRowStyle {
 
 struct DemoBackgroundStyle: FlickMenuBackgroundStyle {
     let choice: BackgroundChoice
+
+    var contentColorScheme: ColorScheme? {
+        switch choice {
+        case .material: FlickMaterialBackgroundStyle().contentColorScheme
+        case .gradient: FlickGradientBackgroundStyle().contentColorScheme
+        case .dim: FlickColorBackgroundStyle(.black.opacity(0.45)).contentColorScheme
+        case .clear: FlickColorBackgroundStyle(.clear).contentColorScheme
+        }
+    }
 
     @ViewBuilder
     func makeBody(configuration: Configuration) -> some View {
@@ -148,5 +204,7 @@ struct EdgeAppearanceModifier: ViewModifier {
             .flickMenuPhysics(appearance.physics.physics, edges: edges)
             .flickMenuTracking(ratio: appearance.trackingRatio, edges: edges)
             .flickMenuBoomerang(appearance.boomerang.boomerang, edges: edges)
+            .flickMenuHighlight(appearance.highlight.emphasis, edges: edges)
+            .flickMenuSelection(appearance.selection.emphasis, edges: edges)
     }
 }

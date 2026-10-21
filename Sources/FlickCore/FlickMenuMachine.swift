@@ -82,6 +82,9 @@ public struct FlickSession: Hashable, Sendable {
     public var velocity: CGFloat
     /// The offset of the menu's first item along the main axis.
     public var menuOffset: CGFloat
+    /// The finger's position in the menu, in items: `k + 0.5` is the centre of item `k`.
+    /// It drives the highlight, and stays reachable even when overscroll holds the menu back.
+    public var progress: CGFloat
     public var highlightedIndex: Int
     /// Whether the finger has gone past the first or last item.
     public var isBeyondBounds: Bool
@@ -242,6 +245,7 @@ public struct FlickMenuMachine: Equatable, Sendable {
             current: position,
             velocity: 0,
             menuOffset: 0,
+            progress: CGFloat(anchor) + 0.5,
             highlightedIndex: anchor,
             isBeyondBounds: false
         )
@@ -260,11 +264,14 @@ public struct FlickMenuMachine: Equatable, Sendable {
             anchorIndex: session.anchorIndex,
             physics: configuration.physics[session.edge]
         )
-        let raw = FlickTracking.rawItemIndex(
-            at: session.current,
-            menuOffset: session.menuOffset,
-            itemLength: geometry.itemLength[session.edge]
+        session.progress = geometry.progress(
+            for: session.edge,
+            start: session.start,
+            current: session.current,
+            anchorIndex: session.anchorIndex,
+            physics: configuration.physics[session.edge]
         )
+        let raw = Self.flooredIndex(session.progress)
         session.isBeyondBounds = raw < 0 || raw >= geometry.itemCount
         session.highlightedIndex = Self.clampedIndex(raw, count: geometry.itemCount)
         phase = .open(session)
@@ -335,6 +342,12 @@ public struct FlickMenuMachine: Equatable, Sendable {
             for: edge,
             indicatorSize: configuration.indicatorSize[edge]
         )
+    }
+
+    private static func flooredIndex(_ progress: CGFloat) -> Int {
+        let value = progress.rounded(.down)
+        guard value.isFinite else { return 0 }
+        return Int(max(min(value, CGFloat(Int32.max)), CGFloat(Int32.min)))
     }
 
     private static func clampedIndex(_ index: Int, count: Int) -> Int {

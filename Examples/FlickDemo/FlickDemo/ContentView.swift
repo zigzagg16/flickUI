@@ -15,12 +15,7 @@ struct ContentView: View {
         PageView(page: page, lastEvent: lastEvent) {
             showsSettings = true
         }
-        .flickMenu(DemoPage.allCases, selection: $selection, edges: settings.edges) { page, _ in
-            Label(page.title, systemImage: page.symbol)
-                .foregroundStyle(.primary)
-        } icon: { page in
-            Image(systemName: page.symbol)
-        }
+        .flickMenu(DemoPage.allCases, selection: $selection, edges: settings.edges, title: \.title, systemImage: \.symbol)
         .modifier(EdgeAppearanceModifier(appearance: settings.sides, edges: .horizontal))
         .modifier(EdgeAppearanceModifier(appearance: settings.effectiveEnds, edges: .vertical))
         .flickMenuHome(settings.home, position: settings.homePosition)

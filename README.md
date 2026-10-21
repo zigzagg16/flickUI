@@ -20,14 +20,14 @@ struct ContentView: View {
 
     var body: some View {
         TabContent(tab)
-            .flickMenu(Tab.allCases, selection: $tab, edges: .all) { tab, row in
-                Label(tab.title, systemImage: tab.symbol)
-            } icon: { tab in
-                Image(systemName: tab.symbol)
-            }
+            .flickMenu(Tab.allCases, selection: $tab, edges: .all, title: \.title, systemImage: \.symbol)
     }
 }
 ```
+
+Every item is an SF Symbol with a title. While the menu is open, the indicator
+leaves the edge and morphs into a bead under the highlighted item's symbol, so
+the symbol is never shown twice.
 
 ### Customising, globally or per edge
 
@@ -36,8 +36,10 @@ edges only; edge-specific settings always win, whatever the modifier order.
 
 ```swift
 ContentView()
-    .flickMenuIndicatorStyle(.glass)                       // all edges
+    .flickMenuIndicatorStyle(.morphing(.liquid))           // all edges
     .flickMenuIndicatorStyle(.bubble(tint: .pink), edges: .vertical)
+    .flickMenuHighlight(FlickMenuItemEmphasis(tint: .yellow, symbolVariant: .fill, symbolEffect: .wiggle))
+    .flickMenuSelection(FlickMenuItemEmphasis(symbolEffect: .breathe.repeating))
     .flickMenuPhysics(.fluid)
     .flickMenuTracking(ratio: 3, edges: .bottom)           // shorter swipes on the bottom edge
     .flickMenuRowStyle(.magnifying(.dock), edges: .horizontal)
@@ -51,13 +53,31 @@ ContentView()
 
 | Setting | Per edge | Built-ins |
 |---|---|---|
-| `flickMenuIndicatorStyle` | ✓ | `.automatic` (glass on iOS 26+, bubble before), `.glass`, `.bubble`, `.capsule`, or your own `FlickIndicatorStyle` |
+| `flickMenuIndicatorStyle` | ✓ | `.automatic` (a morphing drop, in Liquid Glass on iOS 26+), `.morphing(.drop / .squircle / .liquid / .still, tint:)`, `.glass`, `.bubble`, `.capsule`, or your own `FlickIndicatorStyle` |
+| `flickMenuHighlight` / `flickMenuSelection` | ✓ | `FlickMenuItemEmphasis`: tint, symbol variant and SF Symbols effect (`.bounce`, `.pulse`, `.wiggle`, `.breathe`, `.rotate`, `.scale`, `.variableColor`, once or `.repeating`) |
 | `flickMenuRowStyle` | ✓ | `.magnifying` (default), `.plain`, or your own `FlickMenuRowStyle` |
-| `flickMenuBackground` | ✓ | `.material` (default), `.gradient`, `.color`, `.clear`, or your own `FlickMenuBackgroundStyle` |
-| `flickMenuPhysics` / `flickMenuTracking` | ✓ | `.fluid` (default), `.carioca`, `.snappy`, `.direct` |
+| `flickMenuBackground` | ✓ | `.material` (default), `.gradient`, `.color`, `.clear`, or your own `FlickMenuBackgroundStyle`. Rows switch to light text on dark backgrounds (`contentColorScheme`) |
+| `flickMenuPhysics` / `flickMenuTracking` | ✓ | `.fluid` (default), `.carioca`, `.snappy`, `.direct`. Every item stays reachable wherever a swipe starts (`reachesAllItems`), except with `.carioca` |
 | `flickMenuBoomerang` | ✓ | `.stay` (default), `.edge`, `.position`, `.origin` |
 | `flickMenuLayout` | ✓ | item length, indicator size and margin |
 | `flickMenuHome`, `flickMenuFeedback`, `flickMenuDefersSystemGestures`, `onFlickMenuEvent` | — | |
+
+### Morphing indicator
+
+`FlickMorphingIndicatorStyle` draws a `FlickMorphingShape`, whose `FlickShapeForm`
+(roundness on each side, a tail pointing at the edge, stretch) animates between
+any two values. A `FlickIndicatorMorph` picks the form at rest, the form while
+open, how far it stretches with the finger's speed and how springy it is:
+
+```swift
+let morph = FlickIndicatorMorph(
+    resting: FlickShapeForm(edgeRoundness: 0.6, farRoundness: 1, tail: 0.3),
+    open: .squircle,
+    maximumStretch: 0.4,
+    bounce: 0.5
+)
+ContentView().flickMenuIndicatorStyle(.morphing(morph, tint: .orange))
+```
 
 ## Highlights (planned)
 

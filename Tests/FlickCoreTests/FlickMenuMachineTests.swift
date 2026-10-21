@@ -202,6 +202,70 @@ struct FlickMenuMachineTests {
     }
 }
 
+@Suite("Reaching every item")
+struct FlickReachTests {
+    /// A 400×800 container with a 34pt bottom inset and six 60pt items.
+    private func makeMachine(physics: FlickPhysics, selectedIndex: Int = 0) -> FlickMenuMachine {
+        FlickMenuMachine(
+            configuration: FlickMenuConfiguration(physics: FlickEdgeValues(physics)),
+            geometry: FlickGeometry(
+                containerSize: CGSize(width: 400, height: 800),
+                safeAreaInsets: FlickInsets(top: 0, left: 0, bottom: 34, right: 0),
+                itemLength: 60,
+                itemCount: 6
+            ),
+            selectedIndex: selectedIndex
+        )
+    }
+
+    @Test func aSwipeNearTheBottomReachesTheLastItem() {
+        var machine = makeMachine(physics: .fluid)
+        #expect(machine.send(.began(edge: .right, position: 700)) == [.opened(.right), .highlighted(0)])
+        // The safe area ends at 766; the last item's centre is reached half an item before.
+        machine.send(.moved(position: 736, velocity: 0))
+        #expect(machine.session?.highlightedIndex == 5)
+        #expect(machine.session?.isBeyondBounds == false)
+    }
+
+    @Test func aSwipeInTheInsetStillReachesTheLastItem() {
+        var machine = makeMachine(physics: .fluid)
+        machine.send(.began(edge: .right, position: 780))
+        machine.send(.moved(position: 790, velocity: 0))
+        #expect(machine.session?.highlightedIndex == 5)
+    }
+
+    @Test func aSwipeNearTheTopReachesTheFirstItem() {
+        var machine = makeMachine(physics: .snappy, selectedIndex: 5)
+        machine.send(.began(edge: .left, position: 60))
+        machine.send(.moved(position: 30, velocity: 0))
+        #expect(machine.session?.highlightedIndex == 0)
+    }
+
+    @Test func theRatioIsKeptWhenThereIsRoom() {
+        var machine = makeMachine(physics: .fluid)
+        machine.send(.began(edge: .right, position: 100))
+        machine.send(.moved(position: 130, velocity: 0))
+        // 2× tracking: 30pt moves through one item.
+        #expect(machine.session?.highlightedIndex == 1)
+        #expect(machine.session?.menuOffset == 40)
+    }
+
+    @Test func overscrollDoesNotChangeTheHighlight() {
+        // The menu would start below the screen, so the rubber band pulls it up,
+        // but the selected item stays highlighted.
+        var machine = makeMachine(physics: .fluid, selectedIndex: 0)
+        #expect(machine.send(.began(edge: .right, position: 760)) == [.opened(.right), .highlighted(0)])
+    }
+
+    @Test func cariocaKeepsItsOriginalReach() {
+        var machine = makeMachine(physics: .carioca)
+        machine.send(.began(edge: .right, position: 700))
+        machine.send(.moved(position: 736, velocity: 0))
+        // 2× tracking only: 36pt moves through one item.
+        #expect(machine.session?.highlightedIndex == 1)
+    }
+}
+
 @Suite("Per-edge behaviour")
 struct FlickPerEdgeMachineTests {
     @Test func boomerangAndPhysicsFollowTheOpeningEdge() {
