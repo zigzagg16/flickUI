@@ -140,6 +140,15 @@ struct ContentView: View {
 menu.open(from: .trailing)
 ```
 
+### Per-edge customisation
+
+Every setting has a default for all edges, plus optional overrides for specific
+edges (`edges:` parameter). Edge-specific values always take precedence over the
+default, whatever order the modifiers are applied in. The public API stores
+`FlickEdgeSettings` (logical edges), which is resolved to `FlickEdgeValues`
+(physical edges) once the layout direction is known. Per-edge settings cover the
+indicator, row and background styles, physics, boomerang and layout.
+
 ### Customisation surface
 | Area | API | Built-ins |
 |---|---|---|
@@ -260,15 +269,15 @@ Examples/FlickDemo/   Showcase app: every style, edge, physics preset and Duo po
 ## 8. Milestones
 
 Each milestone is a set of commits on the dev branch, squash-merged into `main`.
-🟡 = written, waiting for its first CI run (no Swift toolchain is available in the authoring environment).
+✅ = done and green in CI · 🟡 = in progress or waiting for CI.
 
 | # | Milestone | Deliverable |
 |---|---|---|
-| M0 🟡 | **Scaffold** | `Package.swift` (tools 6.0, `.iOS(.v18)`, Swift 6 mode), layout, SwiftLint config, GitHub Actions (engine tests on Linux and macOS, plus an iOS Simulator build), README |
-| M1 🟡 | **Engine** | `FlickGeometry` (two axes, four edges), `FlickPhysics`, Carioca regression tests |
-| M2 🟡 | **State machine** | Reducer plus tests for every boomerang, cancel, tap, programmatic-open and geometry-change path (hover and hinge events arrive with M7–M8) |
-| M3 | **Gesture bridge** | Edge recognisers for all edges, system-gesture coexistence, programmatic open |
-| M4 | **Menu overlay** | Tracking, highlight, release with velocity, haptics, callbacks |
+| M0 ✅ | **Scaffold** | `Package.swift` (tools 6.0, `.iOS(.v18)`, Swift 6 mode), layout, SwiftLint config, GitHub Actions (engine tests on Linux and macOS, plus an iOS Simulator build), README |
+| M1 ✅ | **Engine** | `FlickGeometry` (two axes, four edges), `FlickPhysics`, Carioca regression tests |
+| M2 ✅ | **State machine** | Reducer plus tests for every boomerang, cancel, tap, programmatic-open and geometry-change path (hover and hinge events arrive with M7–M8) |
+| M3 🟡 | **Gesture bridge** | Edge recognisers for all edges, system-gesture coexistence, programmatic open |
+| M4 🟡 | **Menu overlay** | Tracking, highlight, release with velocity, haptics, callbacks |
 | M5 | **Indicator** | `.bubble` and `.glass` with the iOS 26 morph, traverse keyframes, boomerang, symbol transitions |
 | M6 | **Styles** | Row, indicator and background styles, physics presets, feedback, shader ripple |
 | M7 | **iPhone Duo** | `FlickFoldModel` (tests first), hinge observer, posture placement, hinge edge, display continuity |
