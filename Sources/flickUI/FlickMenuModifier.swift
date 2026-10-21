@@ -99,9 +99,27 @@ where Data: RandomAccessCollection, Data.Element: Identifiable, Row: View, Icon:
             homeEdge: settings.home.edge.resolved(isRightToLeft: isRightToLeft),
             homeFraction: settings.home.position,
             boomerang: settings.boomerang.resolved(isRightToLeft: isRightToLeft),
-            physics: settings.physics.resolved(isRightToLeft: isRightToLeft),
+            physics: physics,
             indicatorSize: layouts.indicatorFrames
         )
+    }
+
+    /// Physics per edge, with tracking ratios from `flickMenuTracking` applied on top.
+    private var physics: FlickEdgeValues<FlickPhysics> {
+        let physics = settings.physics.resolved(isRightToLeft: isRightToLeft)
+        let ratios = settings.trackingRatio.resolved(isRightToLeft: isRightToLeft)
+        var result = physics
+        if let ratio = ratios.base {
+            result.base.trackingRatio = ratio
+        }
+        for edge in FlickScreenEdge.allCases {
+            var value = physics[edge]
+            if let ratio = ratios[edge] {
+                value.trackingRatio = ratio
+            }
+            result[edge] = value
+        }
+        return result
     }
 
     private var selectedIndex: Int {

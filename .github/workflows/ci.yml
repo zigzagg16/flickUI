@@ -30,3 +30,11 @@ jobs:
             -scheme flickUI \
             -destination 'generic/platform=iOS Simulator' \
             -skipPackagePluginValidation
+      - name: Build demo app for iOS Simulator
+        run: |
+          xcodebuild build \
+            -project Examples/FlickDemo/FlickDemo.xcodeproj \
+            -scheme FlickDemo \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO

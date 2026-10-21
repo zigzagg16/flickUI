@@ -63,6 +63,9 @@ struct FlickMenuSettings {
     var home = FlickMenuHome()
     var layout = FlickEdgeSettings(FlickMenuLayout())
     var physics = FlickEdgeSettings(FlickPhysics.fluid)
+    /// Tracking ratios set with `flickMenuTracking`. They apply on top of `physics`,
+    /// so the two modifiers can be combined in any order.
+    var trackingRatio = FlickEdgeSettings<CGFloat?>(nil)
     var boomerang = FlickEdgeSettings(FlickBoomerang.stay)
     var indicatorStyle = FlickEdgeSettings<AnyFlickIndicatorStyle?>(nil)
     var rowStyle = FlickEdgeSettings<AnyFlickMenuRowStyle?>(nil)
@@ -110,20 +113,10 @@ extension View {
         transformEnvironment(\.flickMenuSettings) { $0.physics.set(physics, for: edges) }
     }
 
-    /// Shorthand for the tracking ratio: how fast the finger moves through items.
-    /// For specific edges, the edge's current physics are kept and only the ratio changes.
+    /// How fast the finger moves through items, for all edges or only some.
+    /// It applies on top of `flickMenuPhysics`, whatever the modifier order.
     public func flickMenuTracking(ratio: CGFloat, edges: FlickEdgeSet = .all) -> some View {
-        transformEnvironment(\.flickMenuSettings) { settings in
-            if edges == .all {
-                settings.physics.base.trackingRatio = ratio
-            } else {
-                for edge in edges.edges {
-                    var physics = settings.physics[edge]
-                    physics.trackingRatio = ratio
-                    settings.physics.overrides[edge] = physics
-                }
-            }
-        }
+        transformEnvironment(\.flickMenuSettings) { $0.trackingRatio.set(ratio, for: edges) }
     }
 
     /// Where the indicator goes after an item is chosen, for all edges or only some.

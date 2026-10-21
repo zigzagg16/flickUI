@@ -70,6 +70,24 @@ ContentView()
 - VoiceOver, Reduce Motion, right-to-left languages, Dynamic Type, keyboard and
   Apple Pencil Pro support
 
+## Demo app
+
+`Examples/FlickDemo` is a showcase app with a full-screen page per menu item and a
+**Customize** sheet to change every setting live, including different settings for
+the left/right and top/bottom edges.
+
+To run it on a device:
+
+1. Open `Examples/FlickDemo/FlickDemo.xcodeproj` in Xcode 16 or later
+   (Xcode 26+ for Liquid Glass).
+2. Select the **FlickDemo** target → *Signing & Capabilities* → choose your
+   **Team**. If the bundle identifier is taken, change `dev.flickui.FlickDemo` to
+   something unique.
+3. Pick your iPhone or iPad as the run destination and press **Run** (⌘R).
+
+The project references the package from the repository root, so library changes
+are picked up immediately.
+
 ## Requirements
 
 - iOS / iPadOS 18 or later. Newer features turn on automatically on iOS 26 and 27.1.
