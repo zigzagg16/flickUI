@@ -124,7 +124,7 @@ struct DemoSettings: Equatable {
         row: .dock,
         background: .gradient,
         trackingRatio: 3,
-        boomerang: .origin,
+        boomerang: .stay,
         highlight: EmphasisChoice(effect: .wiggle, tints: true, tint: .yellow, fills: true),
         selection: EmphasisChoice(effect: .breathe, repeats: true)
     )

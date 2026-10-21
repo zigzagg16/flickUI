@@ -90,6 +90,16 @@ struct FlickMenuMachineTests {
         #expect(isApproximately(machine.indicator.position, position))
     }
 
+    @Test func stayKeepsTheIndicatorOnTheBottomEdge() {
+        var machine = makeMachine(boomerang: .stay)
+        machine.send(.began(edge: .bottom, position: 100))
+        machine.send(.moved(position: 160, velocity: 0))
+        #expect(machine.send(.ended(velocity: 0)) == [.chose(2)])
+        #expect(machine.indicator.edge == .bottom)
+        // Menu offset 10 (100 - 30 - 60) + 2×60 + 30.
+        #expect(isApproximately(machine.indicator.position, 160))
+    }
+
     @Test func edgeBoomerangAcrossAxesUsesHomePosition() {
         var machine = makeMachine(boomerang: .edge)
         machine.send(.began(edge: .top, position: 100))
