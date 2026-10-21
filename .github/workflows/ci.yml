@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**", dev]
+  pull_request:
+
+jobs:
+  core-linux:
+    name: Engine tests (Linux)
+    runs-on: ubuntu-latest
+    container: swift:6.1
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test
+
+  ios:
+    name: Build and test (iOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select latest Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+      - run: xcodebuild -version
+      - name: Engine tests (macOS)
+        run: swift test
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild build \
+            -scheme flickUI \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipPackagePluginValidation

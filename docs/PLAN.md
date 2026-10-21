@@ -124,7 +124,7 @@ struct ContentView: View {
             }
             .flickMenuEdges(.all)                         // [.leading, .trailing, .top, .bottom, .hinge]
             .flickMenuTracking(ratio: 2.0, rubberBand: .soft)
-            .flickMenuBoomerang(.originalPosition)
+            .flickMenuBoomerang(.origin)              // .stay, .edge, .position, .origin
             .flickMenuIndicatorStyle(.glass)              // .glass, .bubble, .capsule, .orb, custom
             .flickMenuRowStyle(.magnifying)               // .plain, .magnifying, .carousel, custom
             .flickMenuBackground(.glass(.regular))         // .glass / material / color / custom view
@@ -168,32 +168,39 @@ gets a polished fallback, never a broken one.
 | **iOS 26** | Liquid Glass: `glassEffect`, `GlassEffectContainer`, `glassEffectID` + `@Namespace`, `.interactive()` | The glass indicator **morphs** into the menu panel and back. The materials match the system look |
 | **iOS 27.1** | Foldable APIs (hinge state and angle, arrangement and reserved regions)¹ | The iPhone Duo features in §6 |
 
-¹ These names come from early, secondhand reports. They will be checked against
-the iOS 27.1 SDK headers before implementation, and the code will be isolated in
-one file so a renamed symbol doesn't affect the rest.
+¹ See §6.
 
 ---
 
-## 6. iPhone Duo and new-device features
+## 6. Device-specific features
 
-- **Fold-aware layout (`.avoidHinge`, the default).** Using the reserved-region
-  API, rows never straddle the fold. If the menu would cross it, the rows snap to
-  one side or split around it. The indicator never rests on the crease.
-- **Posture-aware placement.** When the phone is half-folded (book or tabletop
-  posture), the menu opens on the half under the finger and the indicator stays
-  within that half.
-- **Hinge edge.** A swipe that starts at the fold line opens the menu along the
-  fold, with items fanning out to both halves. This edge is opt-in.
-- **Hinge-driven motion.** As the device folds, the indicator's glass and the
-  row parallax respond to the hinge angle. This follows Apple's guidance that
-  hinge data is for motion-tied effects, not layout.
-- **Display continuity.** Selection and indicator position are kept when the app
-  moves between the outer and inner displays, and the indicator moves to the
-  matching place on the new display.
-- **Other hardware.** The menu avoids the Dynamic Island and sensor housing using
-  safe-area and region data, never per-device constants. It also handles
-  Stage Manager window resizing and iPad pointer hover (hovering near an edge
-  makes the indicator peek out).
+The aim is maximum support: every feature below is detected at runtime
+(`if #available`, hardware capability checks, size and region data, never device
+model strings). Devices without a feature get the iOS 18 base experience.
+
+| Device / hardware | Feature | API (minimum OS) |
+|---|---|---|
+| **iPhone Duo** (foldable) | Rows never straddle the fold. The indicator never rests on the crease. | Reserved regions (27.1)¹ |
+| | Half-folded (book or tabletop) posture: the menu opens on the half under the finger | Hinge state (27.1)¹ |
+| | Opt-in **hinge edge**: a swipe from the fold opens the menu along it, with items fanning out to both halves | Hinge geometry (27.1)¹ |
+| | Glass and parallax react to the hinge angle | Hinge angle (27.1)¹ |
+| | Selection and indicator position carry over between the outer and inner displays | Scene geometry (18) |
+| **Liquid Glass devices** | The glass indicator **morphs** into the menu. The material follows the system glass setting | `glassEffect`, `GlassEffectContainer`, `glassEffectID` (26) |
+| **Dynamic Island / notch** | The top edge and resting positions avoid the sensor housing | Safe area (18) |
+| **ProMotion (120 Hz)** | Tracking follows the gesture recogniser at display rate. Springs are tuned for 120 Hz | `UIGestureRecognizerRepresentable` (18) |
+| **Taptic Engine** | Detent haptics per item, a stronger "edge hit" at the ends, and a commit thump | `sensoryFeedback` (18); Core Haptics patterns where supported |
+| **iPad + Apple Pencil Pro** | Squeeze opens the menu at the Pencil's position. Barrel roll moves through items | `onPencilSqueeze`, hover pose (17.5+) |
+| **iPad pointer / trackpad** | Hovering near an edge makes the indicator peek out. Rows have hover and lift effects | `onContinuousHover`, `hoverEffect` (18) |
+| **iPad hardware keyboard** | A shortcut opens the menu, arrow keys move, Return chooses, Esc closes | `keyboardShortcut`, `onKeyPress` (18) |
+| **Stage Manager / Split View** | The menu lays out from the live window size and adapts as the window resizes | `onGeometryChange` (18) |
+| **Action button / Control Center** | An App Intent and Control widget open the menu from outside the app | `AppIntent`, `ControlWidget` (18) |
+
+Not used: **Camera Control**. Apple reserves it for camera experiences, so a
+navigation menu should not use it.
+
+¹ These names come from early, secondhand reports. They will be checked against
+the iOS 27.1 SDK headers before implementation, and the code will be isolated in
+one file so a renamed symbol doesn't affect the rest.
 
 ---
 
@@ -253,18 +260,19 @@ Examples/FlickDemo/   Showcase app: every style, edge, physics preset and Duo po
 ## 8. Milestones
 
 Each milestone is a set of commits on the dev branch, squash-merged into `main`.
+🟡 = written, waiting for its first CI run (no Swift toolchain is available in the authoring environment).
 
 | # | Milestone | Deliverable |
 |---|---|---|
-| M0 | **Scaffold** | `Package.swift` (tools 6.0, `.iOS(.v18)`, Swift 6 mode), layout, SwiftLint, GitHub Actions (Linux engine tests, plus macOS `xcodebuild test` on an iOS simulator), README skeleton |
-| M1 | **Engine** | `FlickGeometry` (two axes, four edges), `FlickPhysics`, Carioca regression tests |
-| M2 | **State machine** | Reducer plus tests for every boomerang, cancel, tap, hover and geometry-change path |
+| M0 🟡 | **Scaffold** | `Package.swift` (tools 6.0, `.iOS(.v18)`, Swift 6 mode), layout, SwiftLint config, GitHub Actions (engine tests on Linux and macOS, plus an iOS Simulator build), README |
+| M1 🟡 | **Engine** | `FlickGeometry` (two axes, four edges), `FlickPhysics`, Carioca regression tests |
+| M2 🟡 | **State machine** | Reducer plus tests for every boomerang, cancel, tap, programmatic-open and geometry-change path (hover and hinge events arrive with M7–M8) |
 | M3 | **Gesture bridge** | Edge recognisers for all edges, system-gesture coexistence, programmatic open |
 | M4 | **Menu overlay** | Tracking, highlight, release with velocity, haptics, callbacks |
 | M5 | **Indicator** | `.bubble` and `.glass` with the iOS 26 morph, traverse keyframes, boomerang, symbol transitions |
 | M6 | **Styles** | Row, indicator and background styles, physics presets, feedback, shader ripple |
 | M7 | **iPhone Duo** | `FlickFoldModel` (tests first), hinge observer, posture placement, hinge edge, display continuity |
-| M8 | **Accessibility and polish** | VoiceOver, Reduce Motion and Reduce Transparency, RTL, Dynamic Type, hover peek, keyboard |
+| M8 | **Accessibility and device extras** | VoiceOver, Reduce Motion and Reduce Transparency, RTL, Dynamic Type, hover peek, keyboard, Pencil Pro, App Intent and Control widget |
 | M9 | **Demo and docs** | Showcase app, DocC catalogue with tutorials, README with recordings |
 
 ## 9. Open items

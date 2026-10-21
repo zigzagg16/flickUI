@@ -1,0 +1,12 @@
+included:
+  - Sources
+  - Tests
+opt_in_rules:
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - sorted_imports
+line_length:
+  warning: 140
+  error: 200
+identifier_name:
+  excluded: [x, y, i, p]
