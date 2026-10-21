@@ -2,27 +2,32 @@ import Foundation
 
 /// The geometry the menu is laid out in. Everything is computed from live values,
 /// so rotation, window resizing and safe-area changes need no special handling.
-public struct FlickGeometry: Hashable, Sendable {
+public struct FlickGeometry: Equatable, Sendable {
     /// The size of the container the menu covers.
     public var containerSize: CGSize
     /// The container's safe-area insets.
     public var safeAreaInsets: FlickInsets
-    /// The length of one item along the main axis. All items share it,
-    /// because the index math depends on it.
-    public var itemLength: CGFloat
+    /// The length of one item along the main axis, per edge. All items of a menu
+    /// share it, because the index math depends on it.
+    public var itemLength: FlickEdgeValues<CGFloat>
     /// The number of items.
     public var itemCount: Int
 
-    public init(containerSize: CGSize, safeAreaInsets: FlickInsets = .zero, itemLength: CGFloat, itemCount: Int) {
+    public init(
+        containerSize: CGSize,
+        safeAreaInsets: FlickInsets = .zero,
+        itemLength: FlickEdgeValues<CGFloat>,
+        itemCount: Int
+    ) {
         self.containerSize = containerSize
         self.safeAreaInsets = safeAreaInsets
         self.itemLength = itemLength
         self.itemCount = itemCount
     }
 
-    /// The total length of the menu.
-    public var menuLength: CGFloat {
-        itemLength * CGFloat(max(itemCount, 0))
+    /// The total length of the menu opened from an edge.
+    public func menuLength(for edge: FlickScreenEdge) -> CGFloat {
+        itemLength[edge] * CGFloat(max(itemCount, 0))
     }
 
     /// The container's length along the edge's main axis.
@@ -43,7 +48,7 @@ public struct FlickGeometry: Hashable, Sendable {
     public func menuOffsetRange(for edge: FlickScreenEdge) -> ClosedRange<CGFloat> {
         let insets = safeAreaInsets.along(edge.mainAxis)
         let lower = insets.start
-        let upper = mainLength(for: edge) - insets.end - menuLength
+        let upper = mainLength(for: edge) - insets.end - menuLength(for: edge)
         return upper >= lower ? lower...upper : upper...lower
     }
 
@@ -59,27 +64,29 @@ public struct FlickGeometry: Hashable, Sendable {
             start: start,
             current: current,
             anchorIndex: anchorIndex,
-            itemLength: itemLength,
+            itemLength: itemLength[edge],
             trackingRatio: physics.trackingRatio
         )
         return physics.constrain(raw, to: menuOffsetRange(for: edge), dimension: mainLength(for: edge))
     }
 
     /// The item under a main-axis position, or `nil` when there are no items.
-    public func itemIndex(at position: CGFloat, menuOffset: CGFloat) -> Int? {
-        FlickTracking.itemIndex(at: position, menuOffset: menuOffset, itemLength: itemLength, itemCount: itemCount)
+    public func itemIndex(at position: CGFloat, menuOffset: CGFloat, edge: FlickScreenEdge) -> Int? {
+        FlickTracking.itemIndex(at: position, menuOffset: menuOffset, itemLength: itemLength[edge], itemCount: itemCount)
     }
 
     /// The main-axis centre of an item.
-    public func itemCenter(at index: Int, menuOffset: CGFloat) -> CGFloat {
-        menuOffset + itemLength * CGFloat(index) + itemLength / 2
+    public func itemCenter(at index: Int, menuOffset: CGFloat, edge: FlickScreenEdge) -> CGFloat {
+        let length = itemLength[edge]
+        return menuOffset + length * CGFloat(index) + length / 2
     }
 
     /// The signed distance, in items, between an item's centre and a position.
     /// Negative when the position is before the item. Drives per-item effects such as magnification.
-    public func distance(ofItem index: Int, from position: CGFloat, menuOffset: CGFloat) -> CGFloat {
-        guard itemLength > 0 else { return 0 }
-        return (position - itemCenter(at: index, menuOffset: menuOffset)) / itemLength
+    public func distance(ofItem index: Int, from position: CGFloat, menuOffset: CGFloat, edge: FlickScreenEdge) -> CGFloat {
+        let length = itemLength[edge]
+        guard length > 0 else { return 0 }
+        return (position - itemCenter(at: index, menuOffset: menuOffset, edge: edge)) / length
     }
 
     // MARK: Indicator

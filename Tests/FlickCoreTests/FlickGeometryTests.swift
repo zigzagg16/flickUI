@@ -69,21 +69,57 @@ struct FlickGeometryTests {
 
     @Test func itemCentersAndDistances() {
         let geometry = FlickGeometry(containerSize: CGSize(width: 400, height: 800), itemLength: 60, itemCount: 5)
-        #expect(geometry.itemCenter(at: 2, menuOffset: 100) == 250)
-        #expect(isApproximately(geometry.distance(ofItem: 2, from: 280, menuOffset: 100), 0.5))
-        #expect(isApproximately(geometry.distance(ofItem: 3, from: 280, menuOffset: 100), -0.5))
-        #expect(geometry.itemIndex(at: 280, menuOffset: 100) == 3)
+        #expect(geometry.itemCenter(at: 2, menuOffset: 100, edge: .left) == 250)
+        #expect(isApproximately(geometry.distance(ofItem: 2, from: 280, menuOffset: 100, edge: .left), 0.5))
+        #expect(isApproximately(geometry.distance(ofItem: 3, from: 280, menuOffset: 100, edge: .left), -0.5))
+        #expect(geometry.itemIndex(at: 280, menuOffset: 100, edge: .left) == 3)
     }
 
     @Test func noItems() {
         let geometry = FlickGeometry(containerSize: CGSize(width: 400, height: 800), itemLength: 60, itemCount: 0)
-        #expect(geometry.itemIndex(at: 100, menuOffset: 0) == nil)
-        #expect(geometry.menuLength == 0)
+        #expect(geometry.itemIndex(at: 100, menuOffset: 0, edge: .left) == nil)
+        #expect(geometry.menuLength(for: .left) == 0)
     }
 
     @Test func tinyContainerStillHasAValidRestingRange() {
         let geometry = FlickGeometry(containerSize: CGSize(width: 30, height: 30), itemLength: 60, itemCount: 1)
         let range = geometry.restingIndicatorRange(for: .left, indicatorSize: CGSize(width: 50, height: 40))
         #expect(range.lowerBound == range.upperBound)
+    }
+}
+
+@Suite("Per-edge values")
+struct FlickEdgeValuesTests {
+    @Test func overridesWinOverTheBase() {
+        var values = FlickEdgeValues<CGFloat>(60)
+        values[.top] = 80
+        #expect(values[.left] == 60)
+        #expect(values[.top] == 80)
+    }
+
+    @Test func settingAllKeepsEdgeOverridesWhateverTheOrder() {
+        var settings = FlickEdgeSettings(FlickPhysics.fluid)
+        settings.set(.snappy, for: .vertical)
+        settings.set(.carioca, for: .all)
+        #expect(settings[.leading] == .carioca)
+        #expect(settings[.top] == .snappy)
+        #expect(settings[.bottom] == .snappy)
+    }
+
+    @Test func logicalSettingsResolveForRightToLeft() {
+        var settings = FlickEdgeSettings<CGFloat>(60)
+        settings.set(44, for: .leading)
+        #expect(settings.resolved(isRightToLeft: false)[.left] == 44)
+        #expect(settings.resolved(isRightToLeft: true)[.right] == 44)
+        #expect(settings.resolved(isRightToLeft: true)[.left] == 60)
+    }
+
+    @Test func geometryUsesTheOpeningEdgesItemLength() {
+        var itemLength: FlickEdgeValues<CGFloat> = 60
+        itemLength[.top] = 100
+        let geometry = FlickGeometry(containerSize: CGSize(width: 400, height: 800), itemLength: itemLength, itemCount: 3)
+        #expect(geometry.menuLength(for: .left) == 180)
+        #expect(geometry.menuLength(for: .top) == 300)
+        #expect(geometry.itemCenter(at: 1, menuOffset: 0, edge: .top) == 150)
     }
 }

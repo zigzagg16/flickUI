@@ -15,23 +15,26 @@ public enum FlickBoomerang: Hashable, Sendable {
     case origin
 }
 
-/// The fixed settings of a menu.
-public struct FlickMenuConfiguration: Hashable, Sendable {
+/// The settings of a menu. Behaviour can differ per edge: each value is read for
+/// the edge the menu was opened from.
+public struct FlickMenuConfiguration: Equatable, Sendable {
     /// The edge the indicator starts on.
     public var homeEdge: FlickScreenEdge
     /// The indicator's starting position along its edge, from 0 (start) to 1 (end).
     public var homeFraction: CGFloat
-    public var boomerang: FlickBoomerang
-    public var physics: FlickPhysics
+    public var boomerang: FlickEdgeValues<FlickBoomerang>
+    public var physics: FlickEdgeValues<FlickPhysics>
     /// The indicator's size, used to keep it inside the safe area.
-    public var indicatorSize: CGSize
+    public var indicatorSize: FlickEdgeValues<CGSize>
+
+    public static let defaultIndicatorSize = CGSize(width: 50, height: 40)
 
     public init(
         homeEdge: FlickScreenEdge = .right,
         homeFraction: CGFloat = 0.5,
-        boomerang: FlickBoomerang = .stay,
-        physics: FlickPhysics = .fluid,
-        indicatorSize: CGSize = CGSize(width: 50, height: 40)
+        boomerang: FlickEdgeValues<FlickBoomerang> = FlickEdgeValues(.stay),
+        physics: FlickEdgeValues<FlickPhysics> = FlickEdgeValues(.fluid),
+        indicatorSize: FlickEdgeValues<CGSize> = FlickEdgeValues(FlickMenuConfiguration.defaultIndicatorSize)
     ) {
         self.homeEdge = homeEdge
         self.homeFraction = homeFraction
@@ -88,7 +91,7 @@ public enum FlickPhase: Hashable, Sendable {
 }
 
 /// Inputs to the menu.
-public enum FlickEvent: Hashable, Sendable {
+public enum FlickEvent: Equatable, Sendable {
     /// An edge swipe began at a main-axis position.
     case began(edge: FlickScreenEdge, position: CGFloat)
     /// The finger moved.
@@ -125,7 +128,7 @@ public enum FlickEffect: Hashable, Sendable {
 ///
 /// The UI feeds it events and renders its state; animations are derived from state
 /// changes. Every transition is synchronous, so a new gesture can interrupt anything.
-public struct FlickMenuMachine: Hashable, Sendable {
+public struct FlickMenuMachine: Equatable, Sendable {
     public private(set) var configuration: FlickMenuConfiguration
     public private(set) var geometry: FlickGeometry
     public private(set) var selectedIndex: Int
@@ -154,7 +157,7 @@ public struct FlickMenuMachine: Hashable, Sendable {
     /// next to the highlighted item.
     public var openIndicatorPosition: CGFloat? {
         guard let session else { return nil }
-        return geometry.itemCenter(at: session.highlightedIndex, menuOffset: session.menuOffset)
+        return geometry.itemCenter(at: session.highlightedIndex, menuOffset: session.menuOffset, edge: session.edge)
     }
 
     /// Replaces the configuration. An open menu is kept open.
@@ -246,12 +249,12 @@ public struct FlickMenuMachine: Hashable, Sendable {
             start: session.start,
             current: session.current,
             anchorIndex: session.anchorIndex,
-            physics: configuration.physics
+            physics: configuration.physics[session.edge]
         )
         let raw = FlickTracking.rawItemIndex(
             at: session.current,
             menuOffset: session.menuOffset,
-            itemLength: geometry.itemLength
+            itemLength: geometry.itemLength[session.edge]
         )
         session.isBeyondBounds = raw < 0 || raw >= geometry.itemCount
         session.highlightedIndex = Self.clampedIndex(raw, count: geometry.itemCount)
@@ -269,7 +272,7 @@ public struct FlickMenuMachine: Hashable, Sendable {
 
     private mutating func choose(_ index: Int, in session: FlickSession) -> [FlickEffect] {
         selectedIndex = index
-        let released = geometry.itemCenter(at: index, menuOffset: session.menuOffset)
+        let released = geometry.itemCenter(at: index, menuOffset: session.menuOffset, edge: session.edge)
         indicator = restingIndicator(afterChoosingAt: released, from: session.edge)
         phase = .closed
         return [.chose(index)]
@@ -298,7 +301,7 @@ public struct FlickMenuMachine: Hashable, Sendable {
 
     private func restingIndicator(afterChoosingAt released: CGFloat, from edge: FlickScreenEdge) -> FlickIndicatorState {
         let home = configuration.homeEdge
-        switch configuration.boomerang {
+        switch configuration.boomerang[edge] {
         case .stay:
             return FlickIndicatorState(edge: edge, position: restingRange(on: edge).clamp(released))
         case .edge:
@@ -314,14 +317,14 @@ public struct FlickMenuMachine: Hashable, Sendable {
     }
 
     private func restingRange(on edge: FlickScreenEdge) -> ClosedRange<CGFloat> {
-        geometry.restingIndicatorRange(for: edge, indicatorSize: configuration.indicatorSize)
+        geometry.restingIndicatorRange(for: edge, indicatorSize: configuration.indicatorSize[edge])
     }
 
     private func homePosition(on edge: FlickScreenEdge) -> CGFloat {
         geometry.restingIndicatorPosition(
             fraction: configuration.homeFraction,
             for: edge,
-            indicatorSize: configuration.indicatorSize
+            indicatorSize: configuration.indicatorSize[edge]
         )
     }
 

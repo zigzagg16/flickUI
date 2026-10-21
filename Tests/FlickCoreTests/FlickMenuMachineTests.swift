@@ -15,9 +15,9 @@ struct FlickMenuMachineTests {
             configuration: FlickMenuConfiguration(
                 homeEdge: .right,
                 homeFraction: 0.5,
-                boomerang: boomerang,
-                physics: .carioca,
-                indicatorSize: CGSize(width: 50, height: 40)
+                boomerang: FlickEdgeValues(boomerang),
+                physics: FlickEdgeValues(.carioca),
+                indicatorSize: FlickEdgeValues(CGSize(width: 50, height: 40))
             ),
             geometry: FlickGeometry(containerSize: CGSize(width: 400, height: 800), itemLength: 60, itemCount: itemCount),
             selectedIndex: selectedIndex
@@ -187,7 +187,7 @@ struct FlickMenuMachineTests {
 
     @Test func rubberBandKeepsTheMenuNearTheScreen() {
         var machine = FlickMenuMachine(
-            configuration: FlickMenuConfiguration(physics: .fluid),
+            configuration: FlickMenuConfiguration(physics: FlickEdgeValues(.fluid)),
             geometry: FlickGeometry(containerSize: CGSize(width: 400, height: 800), itemLength: 60, itemCount: 5)
         )
         machine.send(.began(edge: .left, position: 100))
@@ -196,5 +196,31 @@ struct FlickMenuMachineTests {
         // lets it pass the bound (0) but holds it much closer.
         let offset = machine.session?.menuOffset ?? 0
         #expect(offset < 0 && offset > -300)
+    }
+}
+
+@Suite("Per-edge behaviour")
+struct FlickPerEdgeMachineTests {
+    @Test func boomerangAndPhysicsFollowTheOpeningEdge() {
+        var boomerang = FlickEdgeValues(FlickBoomerang.stay)
+        boomerang[.top] = .origin
+        var physics = FlickEdgeValues(FlickPhysics.carioca)
+        physics[.left] = .direct
+        var machine = FlickMenuMachine(
+            configuration: FlickMenuConfiguration(homeEdge: .right, boomerang: boomerang, physics: physics),
+            geometry: FlickGeometry(containerSize: CGSize(width: 400, height: 800), itemLength: 60, itemCount: 5)
+        )
+
+        // `.direct` physics on the left edge: the menu does not move with the finger.
+        machine.send(.began(edge: .left, position: 300))
+        machine.send(.moved(position: 420, velocity: 0))
+        #expect(machine.session?.menuOffset == 270)
+        machine.send(.ended(velocity: 0))
+        #expect(machine.indicator.edge == .left)
+
+        // `.origin` boomerang on the top edge: back home.
+        machine.send(.began(edge: .top, position: 200))
+        machine.send(.ended(velocity: 0))
+        #expect(machine.indicator == FlickIndicatorState(edge: .right, position: 400))
     }
 }
