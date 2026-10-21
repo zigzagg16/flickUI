@@ -7,9 +7,57 @@ Swipe in from any screen edge. The selected item appears under your finger,
 sliding moves through the items, and lifting your finger chooses one. It takes
 no taps.
 
-> **Status:** early development. The engine (geometry, physics and state machine)
-> is in place. The SwiftUI layer is next. See [`docs/PLAN.md`](docs/PLAN.md)
-> for the roadmap.
+> **Status:** early development. The engine (geometry, physics, state machine) and
+> a first SwiftUI layer are in place. See [`docs/PLAN.md`](docs/PLAN.md) for the roadmap.
+
+## Usage
+
+```swift
+import flickUI
+
+struct ContentView: View {
+    @State private var tab: Tab.ID = Tab.home.id
+
+    var body: some View {
+        TabContent(tab)
+            .flickMenu(Tab.allCases, selection: $tab, edges: .all) { tab, row in
+                Label(tab.title, systemImage: tab.symbol)
+            } icon: { tab in
+                Image(systemName: tab.symbol)
+            }
+    }
+}
+```
+
+### Customising, globally or per edge
+
+Every setting has a default for all edges. Pass `edges:` to override it for some
+edges only; edge-specific settings always win, whatever the modifier order.
+
+```swift
+ContentView()
+    .flickMenuIndicatorStyle(.glass)                       // all edges
+    .flickMenuIndicatorStyle(.bubble(tint: .pink), edges: .vertical)
+    .flickMenuPhysics(.fluid)
+    .flickMenuTracking(ratio: 3, edges: .bottom)           // shorter swipes on the bottom edge
+    .flickMenuRowStyle(.magnifying(.dock), edges: .horizontal)
+    .flickMenuBackground(.gradient, edges: .top)
+    .flickMenuBoomerang(.origin)
+    .flickMenuLayout(FlickMenuLayout(itemLength: 72), edges: .vertical)
+    .flickMenuHome(.trailing, position: 0.6)
+    .flickMenuFeedback(.subtle)
+    .onFlickMenuEvent { event in print(event) }
+```
+
+| Setting | Per edge | Built-ins |
+|---|---|---|
+| `flickMenuIndicatorStyle` | ✓ | `.automatic` (glass on iOS 26+, bubble before), `.glass`, `.bubble`, `.capsule`, or your own `FlickIndicatorStyle` |
+| `flickMenuRowStyle` | ✓ | `.magnifying` (default), `.plain`, or your own `FlickMenuRowStyle` |
+| `flickMenuBackground` | ✓ | `.material` (default), `.gradient`, `.color`, `.clear`, or your own `FlickMenuBackgroundStyle` |
+| `flickMenuPhysics` / `flickMenuTracking` | ✓ | `.fluid` (default), `.carioca`, `.snappy`, `.direct` |
+| `flickMenuBoomerang` | ✓ | `.stay` (default), `.edge`, `.position`, `.origin` |
+| `flickMenuLayout` | ✓ | item length, indicator size and margin |
+| `flickMenuHome`, `flickMenuFeedback`, `flickMenuDefersSystemGestures`, `onFlickMenuEvent` | — | |
 
 ## Highlights (planned)
 
@@ -40,7 +88,7 @@ Swift Package Manager:
 | Path | Contents |
 |---|---|
 | `Sources/FlickCore` | Platform-independent engine: edges, geometry, physics, state machine |
-| `Sources/flickUI` | SwiftUI / UIKit layer (re-exports `FlickCore`) |
+| `Sources/flickUI` | SwiftUI layer: the `flickMenu` modifier, edge gesture, styles and settings (re-exports `FlickCore`) |
 | `Tests/FlickCoreTests` | Engine tests, including CariocaMenu's original test values as regression tests |
 
 Run the engine tests on macOS or Linux with:
