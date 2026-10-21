@@ -312,7 +312,10 @@ where Data: RandomAccessCollection, Data.Element: Identifiable, Row: View, Icon:
             isSelected: index == machine.selectedIndex,
             edge: edge
         )
-        let label = row(element(at: index), context).environment(\.layoutDirection, layoutDirection)
+        // Along the top and bottom edges, rows are narrow columns: stack labels vertically.
+        let label = row(element(at: index), context)
+            .labelStyle(FlickRowLabelStyle(isCompact: edge.mainAxis == .horizontal))
+            .environment(\.layoutDirection, layoutDirection)
         let configuration = FlickMenuRowStyleConfiguration(
             label: FlickMenuRowStyleConfiguration.Label(content: AnyView(label)),
             index: index,

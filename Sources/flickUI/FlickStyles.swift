@@ -214,6 +214,28 @@ extension FlickMenuRowStyle where Self == FlickPlainRowStyle {
     public static var plain: Self { Self() }
 }
 
+/// The default label style of menu rows. Compact rows, used along the top and bottom
+/// edges, are as narrow as an item, so they stack the icon above a short title.
+struct FlickRowLabelStyle: LabelStyle {
+    let isCompact: Bool
+
+    @ViewBuilder
+    func makeBody(configuration: Configuration) -> some View {
+        if isCompact {
+            VStack(spacing: 4) {
+                configuration.icon
+                configuration.title
+                    .font(.caption2.weight(.medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .multilineTextAlignment(.center)
+        } else {
+            Label(configuration)
+        }
+    }
+}
+
 // MARK: - Background
 
 /// The properties of the menu background, passed to a ``FlickMenuBackgroundStyle``.
