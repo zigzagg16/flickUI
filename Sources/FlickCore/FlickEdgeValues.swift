@@ -1,3 +1,6 @@
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 import Foundation
 
 /// A value with optional per-edge overrides, keyed by physical edge.
@@ -17,6 +20,11 @@ public struct FlickEdgeValues<Value> {
     public subscript(edge: FlickScreenEdge) -> Value {
         get { overrides[edge] ?? base }
         set { overrides[edge] = newValue }
+    }
+
+    /// Transforms the base value and every override.
+    public func map<T>(_ transform: (Value) throws -> T) rethrows -> FlickEdgeValues<T> {
+        FlickEdgeValues<T>(try transform(base), overrides: try overrides.mapValues(transform))
     }
 }
 

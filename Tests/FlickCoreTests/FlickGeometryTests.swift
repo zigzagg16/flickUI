@@ -1,3 +1,6 @@
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 import Foundation
 import Testing
 @testable import FlickCore
@@ -121,5 +124,39 @@ struct FlickEdgeValuesTests {
         #expect(geometry.menuLength(for: .left) == 180)
         #expect(geometry.menuLength(for: .top) == 300)
         #expect(geometry.itemCenter(at: 1, menuOffset: 0, edge: .top) == 150)
+    }
+}
+
+@Suite("Layout")
+struct FlickMenuLayoutTests {
+    @Test func indicatorIsRotatedForTopAndBottomEdges() {
+        let layout = FlickMenuLayout(indicatorSize: CGSize(width: 50, height: 40))
+        #expect(layout.indicatorFrame(for: .left) == CGSize(width: 50, height: 40))
+        #expect(layout.indicatorFrame(for: .bottom) == CGSize(width: 40, height: 50))
+    }
+
+    @Test func indicatorFramesHonourOverrides() {
+        var layouts = FlickEdgeValues(FlickMenuLayout())
+        layouts[.right] = FlickMenuLayout(indicatorSize: CGSize(width: 60, height: 60))
+        let frames = layouts.indicatorFrames
+        #expect(frames[.left] == CGSize(width: 50, height: 40))
+        #expect(frames[.right] == CGSize(width: 60, height: 60))
+        #expect(frames[.top] == CGSize(width: 40, height: 50))
+    }
+
+    @Test func physicalEdgesMapBackToLogicalOnes() {
+        for edge in FlickEdge.allCases {
+            for rtl in [false, true] {
+                #expect(edge.resolved(isRightToLeft: rtl).logical(isRightToLeft: rtl) == edge)
+            }
+        }
+    }
+
+    @Test func mapTransformsBaseAndOverrides() {
+        var values = FlickEdgeValues<CGFloat>(10)
+        values[.top] = 20
+        let doubled = values.map { $0 * 2 }
+        #expect(doubled[.left] == 20)
+        #expect(doubled[.top] == 40)
     }
 }

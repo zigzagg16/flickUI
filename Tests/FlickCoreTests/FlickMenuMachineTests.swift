@@ -1,3 +1,6 @@
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 import Foundation
 import Testing
 @testable import FlickCore
@@ -222,5 +225,17 @@ struct FlickPerEdgeMachineTests {
         machine.send(.began(edge: .top, position: 200))
         machine.send(.ended(velocity: 0))
         #expect(machine.indicator == FlickIndicatorState(edge: .right, position: 400))
+    }
+}
+
+@Suite("Configuration updates")
+struct FlickConfigurationUpdateTests {
+    @Test func changingTheHomeEdgeSendsTheIndicatorHome() {
+        var machine = FlickMenuMachine(
+            configuration: FlickMenuConfiguration(homeEdge: .right),
+            geometry: FlickGeometry(containerSize: CGSize(width: 400, height: 800), itemLength: 60, itemCount: 5)
+        )
+        machine.update(configuration: FlickMenuConfiguration(homeEdge: .bottom, homeFraction: 0.25))
+        #expect(machine.indicator == FlickIndicatorState(edge: .bottom, position: 100))
     }
 }

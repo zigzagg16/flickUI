@@ -1,3 +1,6 @@
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 import Foundation
 
 /// Where the indicator goes after an item is chosen.
@@ -161,9 +164,15 @@ public struct FlickMenuMachine: Equatable, Sendable {
     }
 
     /// Replaces the configuration. An open menu is kept open.
+    /// Changing the home edge or position sends the indicator home.
     public mutating func update(configuration: FlickMenuConfiguration) {
+        let previous = self.configuration
         self.configuration = configuration
-        indicator.position = restingRange(on: indicator.edge).clamp(indicator.position)
+        if configuration.homeEdge != previous.homeEdge || configuration.homeFraction != previous.homeFraction {
+            indicator = FlickIndicatorState(edge: configuration.homeEdge, position: homePosition(on: configuration.homeEdge))
+        } else {
+            indicator.position = restingRange(on: indicator.edge).clamp(indicator.position)
+        }
     }
 
     // MARK: Events

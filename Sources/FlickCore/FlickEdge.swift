@@ -1,3 +1,6 @@
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 import Foundation
 
 /// A logical screen edge the menu can be opened from.
@@ -71,6 +74,16 @@ public enum FlickScreenEdge: Hashable, Sendable, CaseIterable {
         case .right: .left
         case .top: .bottom
         case .bottom: .top
+        }
+    }
+
+    /// The logical edge for a layout direction.
+    public func logical(isRightToLeft: Bool) -> FlickEdge {
+        switch self {
+        case .left: isRightToLeft ? .trailing : .leading
+        case .right: isRightToLeft ? .leading : .trailing
+        case .top: .top
+        case .bottom: .bottom
         }
     }
 
