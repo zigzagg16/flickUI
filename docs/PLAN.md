@@ -73,26 +73,42 @@ picks an item by sliding up or down and selects it by lifting the finger.
 
 ---
 
-## 2. flickUI goals
+## 2. Decisions
+
+| Topic | Decision |
+|---|---|
+| Minimum OS | **iOS/iPadOS 18**. Newer APIs are adopted in tiers (see §5) |
+| Edges | **All four**: `.leading`, `.trailing`, `.top`, `.bottom`, plus a **hinge** edge on foldables |
+| Platforms | iOS and iPadOS in v1. The engine has no UIKit dependency so other touch OSes can follow (see §8) |
+| Tracking speed | Configurable `trackingRatio`. The default `2.0` reproduces CariocaMenu's feel |
+| Module / product | `flickUI` |
+| Branching | All work goes to a dev branch and is squash-merged into `main` |
+
+## 3. Goals
 
 - **Declarative and generic.** It is a single view modifier that works with any
   `Identifiable` data, bound to a selection.
-- **Same feel.** It keeps the opposite-motion, release-to-select mechanic and the
-  traverse/bounce indicator, and gets them from SwiftUI springs and keyframes
-  instead of hand-chained `UIView.animate`.
-- **Customisable throughout.** Rows, indicator, background, layout constants,
-  animations and haptics can all be changed, using SwiftUI's `*Style` protocol
-  pattern.
-- **Safe by construction.** No force-unwraps, edges are validated at the type
-  level, and the layout recomputes from live geometry. Rotation, safe areas,
-  Dynamic Island and iPad multitasking are handled with no extra work from the
-  consumer.
-- **Accessible.** VoiceOver, RTL, Reduce Motion and a tap-to-open fallback.
-- **Testable.** All geometry lives in pure value types with unit tests.
+- **Top-notch interaction.** The opposite-motion, release-to-select mechanic is
+  kept and then improved:
+  - motion is driven by interruptible springs, never fixed durations;
+  - lifting with velocity keeps the menu's momentum;
+  - magnification and resistance make positions feel physical.
+- **Everything customisable.** Rows, indicator, background, layout, physics,
+  haptics, sounds, transitions and accessibility labels can all be changed,
+  using SwiftUI's `*Style` protocol pattern and environment values. Each one has
+  a polished default.
+- **First-class on new hardware.** The menu adapts to iPhone Duo's fold, the
+  Dynamic Island, iPad multitasking and Stage Manager windows.
+- **Safe by construction.** No force-unwraps, the layout always comes from live
+  geometry, and Swift 6 strict concurrency is on.
+- **Accessible.** VoiceOver, RTL, Reduce Motion, Reduce Transparency, Dynamic
+  Type, and a tap or keyboard path to every item.
+- **Testable.** All geometry and the state machine are pure value types with
+  unit tests.
 
 ---
 
-## 3. Proposed public API
+## 4. Proposed public API
 
 ```swift
 struct ContentView: View {
@@ -100,130 +116,168 @@ struct ContentView: View {
 
     var body: some View {
         TabContent(tab)
-            .flickMenu(Tab.allCases, selection: $tab, edges: [.leading, .trailing]) { tab, row in
-                // Custom row. `row` exposes isHighlighted, edge, index…
+            .flickMenu(Tab.allCases, selection: $tab) { tab, row in
+                // row: index, isHighlighted, distance (finger → row, for effects), edge, phase
                 Label(tab.title, systemImage: tab.symbol)
-                    .frame(maxWidth: .infinity, alignment: row.edge == .leading ? .trailing : .leading)
             } icon: { tab in
                 Image(systemName: tab.symbol)      // shown inside the indicator
             }
-            .flickMenuBoomerang(.horizontal)
-            .flickMenuRowHeight(60)
-            .flickMenuIndicatorStyle(.bubble(tint: .blue))   // or a custom FlickIndicatorStyle
-            .flickMenuBackground(.ultraThinMaterial)
-            .flickMenuRestingPosition(0.5)       // 0…1 of available height
-            .flickMenuAllowsOffscreen(true)
+            .flickMenuEdges(.all)                         // [.leading, .trailing, .top, .bottom, .hinge]
+            .flickMenuTracking(ratio: 2.0, rubberBand: .soft)
+            .flickMenuBoomerang(.originalPosition)
+            .flickMenuIndicatorStyle(.glass)              // .glass, .bubble, .capsule, .orb, custom
+            .flickMenuRowStyle(.magnifying)               // .plain, .magnifying, .carousel, custom
+            .flickMenuBackground(.glass(.regular))         // .glass / material / color / custom view
+            .flickMenuHaptics(.default)                   // per event: highlight, edgeHit, commit, cancel
+            .flickMenuFoldBehavior(.avoidHinge)           // iPhone Duo (see §6)
             .onFlickMenuOpen { edge in … }
             .onFlickMenuSelect { tab in … }
     }
 }
+
+// Programmatic control: open from a button, a shortcut or Pencil squeeze.
+@Environment(\.flickMenu) private var menu
+menu.open(from: .trailing)
 ```
 
-Building blocks:
-- `FlickEdge`: `.leading`, `.trailing`, mirrored for RTL. The core is written per
-  axis, so `.top`/`.bottom` can be added later without a rewrite.
-- `FlickBoomerang`: `.none`, `.horizontal`, `.vertical`, `.originalPosition`.
-- `FlickIndicatorStyle` (`makeBody(configuration:)`, like `ButtonStyle`). The
-  configuration exposes `edge`, `icon`, `phase` (resting, tracking, restoring)
-  and `isPressed`. The built-ins are `.bubble` (a port of the PaintCode shape as a
-  mirrored SwiftUI `Shape`), `.capsule`, `.circle` and `.polygon`.
-- `FlickMenuRowStyle` gives full row control. Without one, the row builder's
-  output is wrapped in a default style that handles highlight, edge alignment and
-  insets.
-- The configuration flows through the `Environment`, so it can be set at any
-  level of the view tree, like `.buttonStyle`.
+### Customisation surface
+| Area | API | Built-ins |
+|---|---|---|
+| Indicator | `FlickIndicatorStyle` (`makeBody(configuration:)`): edge, icon, phase, highlight progress, hinge state | `.glass` (Liquid Glass, morphs into the menu), `.bubble` (CariocaMenu's shape, ported as a `Shape`), `.capsule`, `.orb`, `.minimal` |
+| Rows | `FlickMenuRowStyle`: index, highlight, signed distance to the finger, edge, phase | `.plain`, `.magnifying` (Dock-style fisheye), `.carousel` (3-D roll), `.compact` |
+| Background | `FlickMenuBackgroundStyle` | `.glass`, `.material`, `.dim`, `.blurredContent`, `.none` |
+| Layout | `FlickMenuLayout`: row size, spacing, insets, menu alignment on the cross axis, maximum extent | — |
+| Physics | `FlickMenuPhysics`: `trackingRatio`, `rubberBand`, `velocityProjection`, spring presets | `.carioca` (exact original), `.snappy`, `.fluid` |
+| Feedback | `FlickMenuFeedback`: `SensoryFeedback` per event, optional sounds | `.default`, `.subtle`, `.none` |
+| Transitions | Open/close transitions and indicator traverse | `.morph`, `.slide`, `.fade` (used automatically with Reduce Motion) |
+| Accessibility | Labels, hints, custom actions | Generated from the item titles |
+
+The configuration flows through the `Environment`, so it can be set at any level
+of the view tree.
 
 ---
 
-## 4. Internal architecture
+## 5. Platform API tiers
+
+Each tier is gated with `if #available` / `@available`. A device on a lower tier
+gets a polished fallback, never a broken one.
+
+| Tier | APIs used | What it adds |
+|---|---|---|
+| **iOS 18 (base)** | `UIGestureRecognizerRepresentable`, `onGeometryChange`, `keyframeAnimator`, `PhaseAnimator`, `visualEffect`, `sensoryFeedback`, `symbolEffect`/`contentTransition(.symbolEffect(.replace))`, `@Entry` environment values, Metal shader effects (`layerEffect`/`distortionEffect`), `onPencilSqueeze` | The full interaction: edge gesture, springs, magnification, haptics, symbol morphs, a ripple shader when an item is chosen |
+| **iOS 26** | Liquid Glass: `glassEffect`, `GlassEffectContainer`, `glassEffectID` + `@Namespace`, `.interactive()` | The glass indicator **morphs** into the menu panel and back. The materials match the system look |
+| **iOS 27.1** | Foldable APIs (hinge state and angle, arrangement and reserved regions)¹ | The iPhone Duo features in §6 |
+
+¹ These names come from early, secondhand reports. They will be checked against
+the iOS 27.1 SDK headers before implementation, and the code will be isolated in
+one file so a renamed symbol doesn't affect the rest.
+
+---
+
+## 6. iPhone Duo and new-device features
+
+- **Fold-aware layout (`.avoidHinge`, the default).** Using the reserved-region
+  API, rows never straddle the fold. If the menu would cross it, the rows snap to
+  one side or split around it. The indicator never rests on the crease.
+- **Posture-aware placement.** When the phone is half-folded (book or tabletop
+  posture), the menu opens on the half under the finger and the indicator stays
+  within that half.
+- **Hinge edge.** A swipe that starts at the fold line opens the menu along the
+  fold, with items fanning out to both halves. This edge is opt-in.
+- **Hinge-driven motion.** As the device folds, the indicator's glass and the
+  row parallax respond to the hinge angle. This follows Apple's guidance that
+  hinge data is for motion-tied effects, not layout.
+- **Display continuity.** Selection and indicator position are kept when the app
+  moves between the outer and inner displays, and the indicator moves to the
+  matching place on the new display.
+- **Other hardware.** The menu avoids the Dynamic Island and sensor housing using
+  safe-area and region data, never per-device constants. It also handles
+  Stage Manager window resizing and iPad pointer hover (hovering near an edge
+  makes the indicator peek out).
+
+---
+
+## 7. Internal architecture
 
 ```
-Sources/FlickUI/
-  Public/        FlickMenuModifier.swift, FlickEdge.swift, FlickBoomerang.swift,
-                 FlickIndicatorStyle.swift, FlickMenuRowStyle.swift, Environment+Flick.swift
-  Engine/        FlickGeometry.swift      ← pure math (port of topYConstraint/matchingIndex/positionConstants)
-                 FlickStateMachine.swift  ← pure reducer: idle → tracking → committing → restoring → idle
-  Gesture/       EdgePanGesture.swift     ← UIGestureRecognizerRepresentable over UIScreenEdgePanGestureRecognizer
-  Views/         FlickMenuOverlay.swift, FlickMenuList.swift, FlickIndicator.swift, BubbleShape.swift
-Tests/FlickUITests/   FlickGeometryTests.swift, FlickStateMachineTests.swift
-Examples/FlickDemo/   SwiftUI demo app (mirrors the Carioca demo screens)
+Sources/flickUI/
+  Public/        FlickMenuModifier, FlickEdge, FlickBoomerang, styles (Indicator/Row/Background),
+                 FlickMenuPhysics, FlickMenuFeedback, FlickMenuController (programmatic), Environment+Flick
+  Engine/        FlickGeometry       ← pure math for 2 axes (port of topYConstraint/matchingIndex/positionConstants)
+                 FlickPhysics        ← rubber-banding, velocity projection, magnification curve
+                 FlickStateMachine   ← pure reducer: idle → peeking → tracking → committing → restoring
+                 FlickFoldModel      ← hinge/region geometry → safe layout bands (pure, testable without a device)
+  Platform/      EdgePanGesture (UIGestureRecognizerRepresentable), HingeObserver (27.1), HoverPeek
+  Views/         FlickMenuOverlay, FlickMenuStack, FlickIndicator, Shapes/, Shaders/flick.metal
+Tests/flickUITests/   Geometry, physics, state machine, fold model, and the CariocaMenu regression vectors
+Examples/FlickDemo/   Showcase app: every style, edge, physics preset and Duo posture
 ```
 
 ### Key design decisions
-1. **Gesture: wrap UIKit's edge pan** with `UIGestureRecognizerRepresentable`
-   (iOS 18+), not `DragGesture` on an edge strip. This matches the system edge
-   feel, does not block touches on content near the edge, and works over
-   `ScrollView`, `Map` and `WebView` without Carioca's "gesture helper" views. A
-   gesture-recogniser delegate handles coexistence with `NavigationStack`'s
-   interactive back swipe; the docs will recommend `.trailing` when a back stack
-   exists.
-2. **The state machine is a pure reducer.** Events (`began`, `moved`, `ended`,
-   `cancelled`, `tapIndicator`, `tapOutside`, `geometryChanged`) map to a new
-   state plus effects (haptic, notify, animate). This replaces Carioca's
-   `AnimationState` flags and nested completion closures, and makes cancelling
-   mid-animation predictable.
-3. **The geometry is pure and value-typed.** `FlickGeometry` takes the container
-   size, safe-area insets, row height, item count and edge, and returns the menu
-   offset, highlighted index and indicator anchor points. Safe-area insets come
-   straight from SwiftUI, which removes the notch and orientation heuristics.
-   Carioca's existing test vectors (for example 554 / −150 / 700) are ported as
-   regression tests so the feel is preserved.
-4. **Rendering is an overlay ZStack**, laid out with
-   `onGeometryChange`/`GeometryReader`:
-   - a background layer (a style-supplied material or colour) that fades in and
-     out;
-   - the menu list as a `VStack` of fixed-height rows moved with `.offset(y:)`.
-     It does not use `List` or `ScrollView`, because the menu must not scroll;
-   - the indicator, positioned by `.position`, animated with `.spring` and a
-     `keyframeAnimator` for the traverse and bounce.
-5. **Uniform row height is required** because the index math depends on it.
-   It is scaled with `@ScaledMetric` for Dynamic Type.
-6. **Haptics** use `.sensoryFeedback(.selection, trigger: highlightedIndex)` and
-   `.sensoryFeedback(.impact, trigger: committedSelection)`, and can be turned off.
+1. **Axis-generic geometry.** All the math works in terms of a "main axis"
+   (along the edge) and a "cross axis" (away from the edge). Left/right use Y as
+   the main axis and top/bottom use X. The hinge is an internal edge with two
+   sides. Carioca's 554 / −150 / 700 test values are kept as regression tests for
+   `.carioca` physics.
+2. **Gesture: UIKit's edge pan** wrapped with `UIGestureRecognizerRepresentable`.
+   It needs one recogniser per edge. A delegate handles the conflicts: the
+   leading back swipe in a navigation stack, the top edge and Notification
+   Center, and the bottom edge and the home indicator. The top and bottom edges
+   use `preferredScreenEdgesDeferringSystemGestures`, so the system gesture runs
+   first unless the app opts in to taking priority.
+3. **Pure state machine.** Events (`began`, `moved(velocity)`, `ended(velocity)`,
+   `cancelled`, `tapIndicator`, `tapOutside`, `hover`, `geometryChanged`,
+   `hingeChanged`) map to a new state plus effects (haptic, notify, animate). It
+   replaces Carioca's flags and completion closures, and every transition can be
+   interrupted.
+4. **Rendering.** The overlay is a `GlassEffectContainer` on iOS 26 and a
+   `ZStack` on 18. Rows are laid out by hand in a stack, with no scrolling
+   container. Per-row effects use `visualEffect`, so the magnification is driven
+   by the finger position without invalidating the layout. The overlay renders
+   only during interaction. Otherwise only the indicator is in the hierarchy.
+5. **Performance.** No `AnyView` on hot paths, generic style type erasure only
+   at the edges, and 120 Hz tracking checked with Instruments in the demo.
 
 ### Accessibility and robustness
-- The indicator is a real `Button`, labelled "Menu, current: <item>". Activating
-  it opens the menu in tap mode, where a tap on a row selects it and a tap
-  outside or the Escape gesture dismisses it. It also offers an adjustable
-  action and custom actions for each item, so VoiceOver users never need the
-  edge swipe.
-- With Reduce Motion on, the traverse and bounce animations become crossfades.
-- RTL is handled because edges are logical (`.leading`/`.trailing`).
-- Size and safe-area changes during interaction cancel tracking cleanly.
+- The indicator is a real `Button`, labelled "Menu, current: <item>". It has an
+  adjustable action and custom actions for each item. Keyboard shortcuts are
+  supported on iPad.
+- With Reduce Motion on, morphs and bounces become crossfades. With Reduce
+  Transparency on, glass becomes a solid material.
+- RTL mirrors the leading and trailing edges. Dynamic Type scales rows with
+  `@ScaledMetric`.
+- Size, fold or display changes during interaction cancel tracking cleanly.
 
 ---
 
-## 5. Milestones
+## 8. Milestones
+
+Each milestone is a set of commits on the dev branch, squash-merged into `main`.
 
 | # | Milestone | Deliverable |
 |---|---|---|
-| M0 | **Scaffold** | `Package.swift` (tools 6.0, iOS 18, Swift 6 strict concurrency), folder layout, SwiftLint config, GitHub Actions (`xcodebuild test` on an iOS simulator, macOS runner), README skeleton |
-| M1 | **Geometry engine** | `FlickGeometry` plus tests, with Carioca's test vectors ported (top offset, matching index, indicator positions, safe-area cases) |
-| M2 | **State machine** | Pure reducer plus tests for open, track, commit, restore for all 4 boomerang modes, cancel paths and tap mode |
-| M3 | **Edge gesture bridge** | `EdgePanGesture` representable, coexistence with back swipe and scroll views |
-| M4 | **Menu overlay** | Background, list offset tracking, highlight, release-to-select, haptics, open/select callbacks |
-| M5 | **Indicator** | Default `BubbleShape`, edge mirroring, traverse/bounce keyframes, boomerang restore, icon swap |
-| M6 | **Customisation API** | `FlickIndicatorStyle`, `FlickMenuRowStyle`, environment modifiers, built-in styles |
-| M7 | **Accessibility and polish** | VoiceOver path, Reduce Motion, RTL, Dynamic Type, iPad multitasking |
-| M8 | **Demo and docs** | `Examples/FlickDemo` app, DocC catalogue, README with GIF, Xcode previews for each style |
+| M0 | **Scaffold** | `Package.swift` (tools 6.0, `.iOS(.v18)`, Swift 6 mode), layout, SwiftLint, GitHub Actions (Linux engine tests, plus macOS `xcodebuild test` on an iOS simulator), README skeleton |
+| M1 | **Engine** | `FlickGeometry` (two axes, four edges), `FlickPhysics`, Carioca regression tests |
+| M2 | **State machine** | Reducer plus tests for every boomerang, cancel, tap, hover and geometry-change path |
+| M3 | **Gesture bridge** | Edge recognisers for all edges, system-gesture coexistence, programmatic open |
+| M4 | **Menu overlay** | Tracking, highlight, release with velocity, haptics, callbacks |
+| M5 | **Indicator** | `.bubble` and `.glass` with the iOS 26 morph, traverse keyframes, boomerang, symbol transitions |
+| M6 | **Styles** | Row, indicator and background styles, physics presets, feedback, shader ripple |
+| M7 | **iPhone Duo** | `FlickFoldModel` (tests first), hinge observer, posture placement, hinge edge, display continuity |
+| M8 | **Accessibility and polish** | VoiceOver, Reduce Motion and Reduce Transparency, RTL, Dynamic Type, hover peek, keyboard |
+| M9 | **Demo and docs** | Showcase app, DocC catalogue with tutorials, README with recordings |
 
-Every milestone is a separate PR that builds and passes its tests.
+## 9. Open items
 
----
+- Check the iOS 27.1 foldable API names against the SDK (§5, note 1).
+- **Other touch OSes.** watchOS has no edge-pan recogniser, so it would need a
+  `DragGesture`-based gesture and a Digital Crown variant. The engine already
+  allows this, so it is planned after v1. Other platforms (visionOS, Mac
+  Catalyst) can use the tap and keyboard path.
 
-## 6. Open questions
-
-1. **Minimum OS.** The plan assumes iOS 18 for `UIGestureRecognizerRepresentable`.
-   iOS 17 is possible with a `UIViewRepresentable` gesture host, at the cost of
-   more code.
-2. **Edges in v1.** Only leading/trailing (like Carioca), or also top/bottom?
-3. **Platforms.** iOS/iPadOS only, or also visionOS/macOS? Neither has an edge pan.
-4. **Exact feel.** Keep Carioca's 2× opposite-motion constant exactly, or make
-   the ratio configurable (`trackingRatio`, default matching Carioca)?
-5. **Module name.** `FlickUI` (product) in the `flickUI` repo?
-
-## 7. Verification note
-iOS builds and simulator tests need macOS and Xcode. The plan relies on GitHub
-Actions macOS runners for CI. The `Engine/` layer imports only Foundation (where `CGFloat`/`CGPoint` are also
-available on Linux), so it can also be unit-tested on Linux with SwiftPM for fast local
-feedback.
+## 10. Verification
+iOS builds, simulator tests and iPhone Duo behaviour need macOS and Xcode 27.1,
+so CI runs on GitHub Actions macOS runners. The `Engine/` layer imports only
+Foundation (where `CGFloat`/`CGPoint` are also available on Linux), so it can
+also be tested on Linux with SwiftPM for fast local feedback. Behaviour on the
+fold has to be checked in the iPhone Duo simulator or on a device.
