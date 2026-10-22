@@ -281,8 +281,8 @@ Each milestone is a set of commits on the dev branch, squash-merged into `main`.
 | M5 | **Indicator** | `.bubble` and `.glass` with the iOS 26 morph, traverse keyframes, boomerang, symbol transitions |
 | M6 | **Styles** | Row, indicator and background styles, physics presets, feedback, shader ripple |
 | M7 | **iPhone Duo** | `FlickFoldModel` (tests first), hinge observer, posture placement, hinge edge, display continuity |
-| M8 | **Accessibility and device extras** | VoiceOver, Reduce Motion and Reduce Transparency, RTL, Dynamic Type, hover peek, keyboard, Pencil Pro, App Intent and Control widget |
-| M9 | **Demo and docs** | Showcase app, DocC catalogue with tutorials, README with recordings |
+| M8 🟡 | **Accessibility and device extras** | VoiceOver, Reduce Motion and Reduce Transparency, RTL, Dynamic Type, hover peek, keyboard, Pencil Pro, App Intent and Control widget. Still to do: hover peek, App Intent and Control widget |
+| M9 🟡 | **Demo and docs** | Showcase app, DocC catalogue with tutorials, README with recordings. Still to do: tutorials and recordings |
 
 ## 9. Open items
 

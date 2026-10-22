@@ -61,6 +61,23 @@ ContentView()
 | `flickMenuBoomerang` | ✓ | `.stay` (default), `.edge`, `.position`, `.origin` |
 | `flickMenuLayout` | ✓ | item length, indicator size and margin |
 | `flickMenuHome`, `flickMenuFeedback`, `flickMenuDefersSystemGestures`, `onFlickMenuEvent` | — | |
+| `flickMenuKeyboardShortcut`, `flickMenuOpensOnPencilSqueeze` | — | A shortcut to open the menu; Apple Pencil Pro squeeze (off by default) |
+
+### Opening from code, keyboard and accessibility
+
+`@Environment(\.flickMenu)` opens, dismisses and toggles the menu from inside its
+content:
+
+```swift
+@Environment(\.flickMenu) private var menu
+
+Button("Menu", systemImage: "list.bullet") { menu.open() }
+```
+
+While a menu opened without a swipe is shown, the arrow keys move through items,
+Return chooses and Escape closes. For VoiceOver the indicator is an adjustable
+"Menu" button, and the open menu is modal and closes with the escape gesture. Items
+grow with Dynamic Type, and backgrounds become opaque with Reduce Transparency.
 
 ### Morphing indicator
 
@@ -79,16 +96,18 @@ let morph = FlickIndicatorMorph(
 ContentView().flickMenuIndicatorStyle(.morphing(morph, tint: .orange))
 ```
 
-## Highlights (planned)
+## Highlights
 
-- Opens from all four edges, plus the fold on iPhone Duo
+- Opens from all four edges
 - Configurable tracking speed and rubber-banding, with a `.carioca` preset that
   reproduces the original feel exactly
-- Fully customisable indicator, rows, background, haptics and transitions
-- Liquid Glass on iOS 26 and later, with the indicator morphing into the menu
-- Fold-aware layout and hinge-driven effects on iPhone Duo
-- VoiceOver, Reduce Motion, right-to-left languages, Dynamic Type, keyboard and
-  Apple Pencil Pro support
+- Customisable indicator, rows, background and haptics, per edge
+- Liquid Glass on iOS 26 and later, with a morphing indicator
+- VoiceOver, Reduce Motion, Reduce Transparency, right-to-left languages, Dynamic
+  Type, keyboard, pointer and Apple Pencil Pro support
+
+Planned: the fold on iPhone Duo (fold-aware layout and a hinge edge) and custom
+transitions. See [`docs/PLAN.md`](docs/PLAN.md).
 
 ## Demo app
 
@@ -98,8 +117,7 @@ the left/right and top/bottom edges.
 
 To run it on a device:
 
-1. Open `Examples/FlickDemo/FlickDemo.xcodeproj` in Xcode 16 or later
-   (Xcode 26+ for Liquid Glass).
+1. Open `Examples/FlickDemo/FlickDemo.xcodeproj` in Xcode 26 or later.
 2. Select the **FlickDemo** target → *Signing & Capabilities* → choose your
    **Team**. If the bundle identifier is taken, change `dev.flickui.FlickDemo` to
    something unique.
@@ -111,7 +129,7 @@ are picked up immediately.
 ## Requirements
 
 - iOS / iPadOS 18 or later. Newer features turn on automatically on iOS 26 and 27.1.
-- Swift 6
+- Xcode 26 or later, Swift 6
 
 ## Installation
 
@@ -127,13 +145,18 @@ Swift Package Manager:
 |---|---|
 | `Sources/FlickCore` | Platform-independent engine: edges, geometry, physics, state machine |
 | `Sources/flickUI` | SwiftUI layer: the `flickMenu` modifier, edge gesture, styles and settings (re-exports `FlickCore`) |
+| `Sources/flickUI/flickUI.docc` | Documentation catalog: overview, customisation, accessibility and input |
 | `Tests/FlickCoreTests` | Engine tests, including CariocaMenu's original test values as regression tests |
+| `Tests/flickUITests` | Tests for the SwiftUI layer's logic (iOS only) |
 
 Run the engine tests on macOS or Linux with:
 
 ```sh
 swift test
 ```
+
+Run every test on an iOS Simulator with `xcodebuild test -scheme flickUI -destination 'platform=iOS Simulator,name=<iPhone>'`.
+Build the documentation with **Product › Build Documentation** in Xcode.
 
 ## License
 
