@@ -74,17 +74,37 @@ struct FlickMenuSettings {
     var selection = FlickEdgeSettings(FlickMenuItemEmphasis.selected)
     var feedback = FlickMenuFeedback.default
     var defersSystemGestures = true
-    var onEvent: (@MainActor (FlickMenuEvent) -> Void)?
-}
+    /// Handlers from `onFlickMenuEvent`, outermost first. They are references, not
+    /// closures, so the environment can compare them.
+    var eventHandlers: [FlickMenuEventHandler] = []
 
-private struct FlickMenuSettingsKey: EnvironmentKey {
-    static var defaultValue: FlickMenuSettings { FlickMenuSettings() }
+    @MainActor func send(_ event: FlickMenuEvent) {
+        for handler in eventHandlers {
+            handler.handle(event)
+        }
+    }
 }
 
 extension EnvironmentValues {
-    var flickMenuSettings: FlickMenuSettings {
-        get { self[FlickMenuSettingsKey.self] }
-        set { self[FlickMenuSettingsKey.self] = newValue }
+    @Entry var flickMenuSettings = FlickMenuSettings()
+}
+
+/// Holds an `onFlickMenuEvent` handler. Each modifier keeps one instance for its
+/// lifetime and updates its closure, so the environment sees the same reference.
+@MainActor
+final class FlickMenuEventHandler {
+    var handle: @MainActor (FlickMenuEvent) -> Void = { _ in }
+}
+
+private struct FlickMenuEventModifier: ViewModifier {
+    let handler: @MainActor (FlickMenuEvent) -> Void
+    @State private var reference = FlickMenuEventHandler()
+
+    func body(content: Content) -> some View {
+        reference.handle = handler
+        return content.transformEnvironment(\.flickMenuSettings) { [reference] settings in
+            settings.eventHandlers.append(reference)
+        }
     }
 }
 
@@ -165,13 +185,7 @@ extension View {
 
     /// Observes menu events. Several handlers can be attached; all are called.
     public func onFlickMenuEvent(_ handler: @escaping @MainActor (FlickMenuEvent) -> Void) -> some View {
-        transformEnvironment(\.flickMenuSettings) { settings in
-            let previous = settings.onEvent
-            settings.onEvent = { event in
-                previous?(event)
-                handler(event)
-            }
-        }
+        modifier(FlickMenuEventModifier(handler: handler))
     }
 }
 #endif

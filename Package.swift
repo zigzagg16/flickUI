@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "flickUI",
+    defaultLocalization: "en",
     platforms: [
         .iOS(.v18)
     ],
@@ -14,7 +15,7 @@ let package = Package(
         // Imports only Foundation so it can be tested on Linux.
         .target(name: "FlickCore"),
         // SwiftUI / UIKit layer.
-        .target(name: "flickUI", dependencies: ["FlickCore"]),
+        .target(name: "flickUI", dependencies: ["FlickCore"], resources: [.process("Resources")]),
         .testTarget(name: "FlickCoreTests", dependencies: ["FlickCore"])
     ],
     swiftLanguageModes: [.v6]

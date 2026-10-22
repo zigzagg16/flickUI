@@ -34,15 +34,17 @@ public protocol FlickIndicatorStyle {
     @ViewBuilder func makeBody(configuration: Configuration) -> Body
 }
 
+/// Stores the style itself rather than a closure, so the environment can compare it
+/// and the menu only updates when the style really changes.
 struct AnyFlickIndicatorStyle: FlickIndicatorStyle {
-    private let make: @MainActor (Configuration) -> AnyView
+    private let base: any FlickIndicatorStyle
 
     init<S: FlickIndicatorStyle>(_ style: S) {
-        make = { AnyView(style.makeBody(configuration: $0)) }
+        base = style
     }
 
     func makeBody(configuration: Configuration) -> some View {
-        make(configuration)
+        AnyView(base.makeBody(configuration: configuration))
     }
 }
 
@@ -207,15 +209,16 @@ public protocol FlickMenuRowStyle {
     @ViewBuilder func makeBody(configuration: Configuration) -> Body
 }
 
+/// Stores the style itself rather than a closure; see ``AnyFlickIndicatorStyle``.
 struct AnyFlickMenuRowStyle: FlickMenuRowStyle {
-    private let make: @MainActor (Configuration) -> AnyView
+    private let base: any FlickMenuRowStyle
 
     init<S: FlickMenuRowStyle>(_ style: S) {
-        make = { AnyView(style.makeBody(configuration: $0)) }
+        base = style
     }
 
     func makeBody(configuration: Configuration) -> some View {
-        make(configuration)
+        AnyView(base.makeBody(configuration: configuration))
     }
 }
 
@@ -330,17 +333,20 @@ extension FlickMenuBackgroundStyle {
     public var contentColorScheme: ColorScheme? { nil }
 }
 
+/// Stores the style itself rather than a closure; see ``AnyFlickIndicatorStyle``.
 struct AnyFlickMenuBackgroundStyle: FlickMenuBackgroundStyle {
-    private let make: @MainActor (Configuration) -> AnyView
-    let contentColorScheme: ColorScheme?
+    private let base: any FlickMenuBackgroundStyle
 
     init<S: FlickMenuBackgroundStyle>(_ style: S) {
-        make = { AnyView(style.makeBody(configuration: $0)) }
-        contentColorScheme = style.contentColorScheme
+        base = style
+    }
+
+    var contentColorScheme: ColorScheme? {
+        base.contentColorScheme
     }
 
     func makeBody(configuration: Configuration) -> some View {
-        make(configuration)
+        AnyView(base.makeBody(configuration: configuration))
     }
 }
 

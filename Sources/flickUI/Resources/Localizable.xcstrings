@@ -1,0 +1,9 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Menu" : {
+      "comment" : "Accessibility label of the button that opens the menu."
+    }
+  },
+  "version" : "1.0"
+}

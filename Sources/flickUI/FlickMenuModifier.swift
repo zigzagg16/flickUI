@@ -215,11 +215,11 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
             switch effect {
             case let .opened(edge):
                 ticks.open += 1
-                settings.onEvent?(.opened(edge.logical(isRightToLeft: isRightToLeft)))
+                settings.send(.opened(edge.logical(isRightToLeft: isRightToLeft)))
             case let .highlighted(index):
                 // Opening has its own feedback.
                 if !opened { ticks.highlight += 1 }
-                settings.onEvent?(.highlighted(index))
+                settings.send(.highlighted(index))
             case .boundaryReached:
                 ticks.boundary += 1
             case let .chose(index):
@@ -227,9 +227,9 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
                 if index < data.count {
                     selection = element(at: index).id
                 }
-                settings.onEvent?(.chose(index))
+                settings.send(.chose(index))
             case .dismissed:
-                settings.onEvent?(.dismissed)
+                settings.send(.dismissed)
             }
         }
     }
@@ -304,8 +304,10 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
         let itemLength = geometry.itemLength[edge]
         let cross = geometry.crossLength(for: edge)
         let menuLength = geometry.menuLength(for: edge)
-        let rows = ForEach(0..<data.count, id: \.self) { index in
-            rowView(at: index, session: session)
+        // Rows are identified by their item, so their state and symbol effects follow
+        // the item if the data changes.
+        let rows = ForEach(Array(data.enumerated()), id: \.element.id) { index, item in
+            rowView(for: item, at: index, session: session)
                 .frame(width: isVertical ? cross : itemLength, height: isVertical ? itemLength : cross)
         }
 
@@ -325,9 +327,8 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
         .transition(.opacity.combined(with: .scale(scale: 0.96)))
     }
 
-    private func rowView(at index: Int, session: FlickSession) -> some View {
+    private func rowView(for item: Data.Element, at index: Int, session: FlickSession) -> some View {
         let edge = session.edge
-        let item = element(at: index)
         let isHighlighted = index == session.highlightedIndex
         let isSelected = index == machine.selectedIndex
         let label = FlickMenuItemLabel(
@@ -397,7 +398,7 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
                 // moves the indicator follows it without animation.
                 .animation(indicatorAnimation, value: machine.indicator)
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(Text("Menu"))
+                .accessibilityLabel(Text("Menu", bundle: #bundle, comment: "Accessibility label of the button that opens the menu."))
                 .accessibilityValue(Text(title(element(at: index))))
                 .accessibilityAddTraits(.isButton)
                 .accessibilityAction { send(.tapIndicator, animation: openAnimation) }
