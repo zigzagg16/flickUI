@@ -377,10 +377,8 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
             highlight: highlightEmphasis(for: edge),
             selection: selectionEmphasis(for: edge)
         )
-        .labelStyle(FlickRowLabelStyle(edge: edge))
-        .environment(\.layoutDirection, layoutDirection)
         let configuration = FlickMenuRowStyleConfiguration(
-            label: FlickMenuRowStyleConfiguration.Label(content: AnyView(label)),
+            label: FlickMenuRowStyleConfiguration.Label(item: label, edge: edge, layoutDirection: layoutDirection),
             index: index,
             title: title(item),
             systemImage: systemImage(item),
@@ -414,13 +412,13 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
             let index = min(session?.highlightedIndex ?? machine.selectedIndex, data.count - 1)
             let placement = openPlacement(symbolFrame: symbolFrame, itemLength: layout.itemLength)
                 ?? restingPlacement(edge: edge, frame: restingFrame, margin: layout.indicatorMargin)
-            let iconView = Image(systemName: systemImage(element(at: index)))
-                .contentTransition(.symbolEffect(.replace))
-                // Under the menu, the item's own symbol shows on top.
-                .opacity(session == nil ? 1 : 0)
-                .environment(\.layoutDirection, layoutDirection)
             let configuration = FlickIndicatorStyleConfiguration(
-                icon: FlickIndicatorStyleConfiguration.Icon(content: AnyView(iconView)),
+                // Under the menu, the item's own symbol shows on top.
+                icon: FlickIndicatorStyleConfiguration.Icon(
+                    systemImage: systemImage(element(at: index)),
+                    isHidden: session != nil,
+                    layoutDirection: layoutDirection
+                ),
                 systemImage: systemImage(element(at: index)),
                 edge: edge,
                 isOpen: session != nil,

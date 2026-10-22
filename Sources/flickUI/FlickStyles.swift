@@ -8,8 +8,16 @@ import SwiftUI
 public struct FlickIndicatorStyleConfiguration {
     /// An indicator's icon.
     public struct Icon: View {
-        let content: AnyView
-        public var body: some View { content }
+        let systemImage: String
+        let isHidden: Bool
+        let layoutDirection: LayoutDirection
+
+        public var body: some View {
+            Image(systemName: systemImage)
+                .contentTransition(.symbolEffect(.replace))
+                .opacity(isHidden ? 0 : 1)
+                .environment(\.layoutDirection, layoutDirection)
+        }
     }
 
     /// The icon of the selected item. It is hidden while the menu is open, when the
@@ -185,8 +193,15 @@ extension FlickIndicatorStyle where Self == FlickCapsuleIndicatorStyle {
 public struct FlickMenuRowStyleConfiguration {
     /// The row content provided to `flickMenu`.
     public struct Label: View {
-        let content: AnyView
-        public var body: some View { content }
+        let item: FlickMenuItemLabel
+        let edge: FlickScreenEdge
+        let layoutDirection: LayoutDirection
+
+        public var body: some View {
+            item
+                .labelStyle(FlickRowLabelStyle(edge: edge))
+                .environment(\.layoutDirection, layoutDirection)
+        }
     }
 
     public let label: Label
