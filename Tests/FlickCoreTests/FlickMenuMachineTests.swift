@@ -1,9 +1,9 @@
 #if canImport(CoreGraphics)
 import CoreGraphics
 #endif
+@testable import FlickCore
 import Foundation
 import Testing
-@testable import FlickCore
 
 @Suite("Menu state machine")
 struct FlickMenuMachineTests {

@@ -1,9 +1,9 @@
 #if canImport(CoreGraphics)
 import CoreGraphics
 #endif
+@testable import FlickCore
 import Foundation
 import Testing
-@testable import FlickCore
 
 /// CariocaMenu's original test vectors, so `.carioca` physics keep its exact feel.
 @Suite("CariocaMenu regression")

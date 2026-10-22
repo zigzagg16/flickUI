@@ -6,6 +6,14 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    name: SwiftLint
+    runs-on: ubuntu-latest
+    container: ghcr.io/realm/swiftlint:0.65.0
+    steps:
+      - uses: actions/checkout@v4
+      - run: swiftlint lint --reporter github-actions-logging
+
   core-linux:
     name: Engine tests (Linux)
     runs-on: ubuntu-latest
@@ -24,11 +32,13 @@ jobs:
       - run: xcodebuild -version
       - name: Engine tests (macOS)
         run: swift test
-      - name: Build for iOS Simulator
+      - name: Test on iOS Simulator
         run: |
-          xcodebuild build \
+          # The first available iPhone, whatever simulators this Xcode ships.
+          udid=$(xcrun simctl list devices available | grep -m1 -oE 'iPhone[^(]*\([0-9A-F-]{36}\)' | grep -oE '[0-9A-F-]{36}')
+          xcodebuild test \
             -scheme flickUI \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination "id=$udid" \
             -skipPackagePluginValidation
       - name: Build demo app for iOS Simulator
         run: |

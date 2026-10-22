@@ -186,3 +186,22 @@ public struct FlickMagnification: Hashable, Sendable {
         return 1 + (maximumScale - 1) * CGFloat(falloff)
     }
 }
+
+extension FlickEdgeValues where Value == FlickPhysics {
+    /// The physics with tracking ratios applied on top: each edge's ratio, or the base
+    /// ratio, replaces the physics' own. `nil` keeps it.
+    public func applying(trackingRatios ratios: FlickEdgeValues<CGFloat?>) -> Self {
+        var result = self
+        if let ratio = ratios.base {
+            result.base.trackingRatio = ratio
+        }
+        for edge in FlickScreenEdge.allCases {
+            var value = self[edge]
+            if let ratio = ratios[edge] {
+                value.trackingRatio = ratio
+            }
+            result[edge] = value
+        }
+        return result
+    }
+}

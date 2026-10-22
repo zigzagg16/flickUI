@@ -8,5 +8,8 @@ opt_in_rules:
 line_length:
   warning: 140
   error: 200
+# The menu modifier holds the whole interaction in one place.
+file_length:
+  warning: 550
 identifier_name:
-  excluded: [x, y, i, p]
+  excluded: [x, y, i, p, c, m, k, by]

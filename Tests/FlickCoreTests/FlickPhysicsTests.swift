@@ -1,9 +1,9 @@
 #if canImport(CoreGraphics)
 import CoreGraphics
 #endif
+@testable import FlickCore
 import Foundation
 import Testing
-@testable import FlickCore
 
 @Suite("Physics")
 struct FlickPhysicsTests {
@@ -55,6 +55,22 @@ struct FlickPhysicsTests {
         #expect(magnification.scale(atDistance: 2) == 1)
         #expect(magnification.scale(atDistance: 5) == 1)
         #expect(FlickMagnification.disabled.scale(atDistance: 0) == 1)
+    }
+
+    @Test func trackingRatiosApplyOnTopOfPhysics() {
+        let physics = FlickEdgeValues(FlickPhysics.fluid, overrides: [.top: .snappy])
+        let ratios = FlickEdgeValues<CGFloat?>(nil, overrides: [.bottom: 3, .top: 4])
+        let result = physics.applying(trackingRatios: ratios)
+        #expect(result[.left] == .fluid)
+        #expect(result[.bottom].trackingRatio == 3)
+        #expect(result[.bottom].overscroll == FlickPhysics.fluid.overscroll)
+        #expect(result[.top].trackingRatio == 4)
+        #expect(result[.top].decelerationRate == FlickPhysics.snappy.decelerationRate)
+
+        let everywhere = physics.applying(trackingRatios: FlickEdgeValues<CGFloat?>(CGFloat(1.5)))
+        #expect(everywhere.base.trackingRatio == 1.5)
+        #expect(everywhere[.top].trackingRatio == 1.5)
+        #expect(everywhere[.top].decelerationRate == FlickPhysics.snappy.decelerationRate)
     }
 
     @Test func absurdOffsetsDoNotTrap() {

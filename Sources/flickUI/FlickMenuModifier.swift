@@ -118,20 +118,8 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
 
     /// Physics per edge, with tracking ratios from `flickMenuTracking` applied on top.
     private var physics: FlickEdgeValues<FlickPhysics> {
-        let physics = settings.physics.resolved(isRightToLeft: isRightToLeft)
-        let ratios = settings.trackingRatio.resolved(isRightToLeft: isRightToLeft)
-        var result = physics
-        if let ratio = ratios.base {
-            result.base.trackingRatio = ratio
-        }
-        for edge in FlickScreenEdge.allCases {
-            var value = physics[edge]
-            if let ratio = ratios[edge] {
-                value.trackingRatio = ratio
-            }
-            result[edge] = value
-        }
-        return result
+        settings.physics.resolved(isRightToLeft: isRightToLeft)
+            .applying(trackingRatios: settings.trackingRatio.resolved(isRightToLeft: isRightToLeft))
     }
 
     private var selectedIndex: Int {
@@ -270,7 +258,11 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
         selection = element(at: next).id
     }
 
-    // MARK: Rendering
+}
+
+// MARK: - Rendering
+
+extension FlickMenuModifier {
 
     @ViewBuilder
     private func overlayContent(in proxy: GeometryProxy) -> some View {
@@ -300,7 +292,14 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
                     indicator(symbolFrame: anchor.map { local[$0] })
                 }
             }
-            keyboardCommands
+            FlickKeyboardCommands(session: machine.session, shortcut: settings.keyboardShortcut) { command in
+                switch command {
+                case .toggle: perform(.toggle(nil))
+                case .dismiss: send(.dismiss, animation: closeAnimation)
+                case let .move(offset): send(.moveHighlight(by: offset), animation: indicatorAnimation)
+                case .choose: send(.chooseHighlighted, animation: closeAnimation)
+                }
+            }
             if settings.opensOnPencilSqueeze {
                 // A leaf view, so turning the setting on and off leaves the content alone.
                 Color.clear
@@ -446,50 +445,6 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
                 .accessibilityAction { send(.tapIndicator, animation: openAnimation) }
                 .accessibilityAdjustableAction { direction in adjustSelection(direction) }
         }
-    }
-
-    /// Hidden buttons for hardware keyboards. They also list the commands in the
-    /// keyboard shortcuts overlay on iPad.
-    @ViewBuilder
-    private var keyboardCommands: some View {
-        let session = machine.session
-        let isPresented = session?.origin == .presentation
-        let isVertical = session?.edge.mainAxis == .vertical
-        ZStack {
-            if let shortcut = settings.keyboardShortcut {
-                commandButton(Text("Open Menu", bundle: #bundle, comment: "Keyboard command that opens or closes the menu.")) {
-                    perform(.toggle(nil))
-                }
-                .keyboardShortcut(shortcut)
-            }
-            if session != nil {
-                commandButton(Text("Close Menu", bundle: #bundle, comment: "Keyboard command that closes the menu.")) {
-                    send(.dismiss, animation: closeAnimation)
-                }
-                .keyboardShortcut(.cancelAction)
-            }
-            if isPresented {
-                commandButton(Text("Previous Item", bundle: #bundle, comment: "Keyboard command that highlights the previous menu item.")) {
-                    send(.moveHighlight(by: -1), animation: indicatorAnimation)
-                }
-                .keyboardShortcut(isVertical ? .upArrow : .leftArrow, modifiers: [])
-                commandButton(Text("Next Item", bundle: #bundle, comment: "Keyboard command that highlights the next menu item.")) {
-                    send(.moveHighlight(by: 1), animation: indicatorAnimation)
-                }
-                .keyboardShortcut(isVertical ? .downArrow : .rightArrow, modifiers: [])
-                commandButton(Text("Choose Item", bundle: #bundle, comment: "Keyboard command that chooses the highlighted menu item.")) {
-                    send(.chooseHighlighted, animation: closeAnimation)
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-        }
-        .frame(width: 0, height: 0)
-        .opacity(0)
-        .accessibilityHidden(true)
-    }
-
-    private func commandButton(_ title: Text, action: @escaping () -> Void) -> some View {
-        Button(action: action) { title }
     }
 
     /// A bead on the line of symbols, under the finger: it slides continuously from

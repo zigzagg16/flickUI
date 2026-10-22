@@ -197,6 +197,8 @@ public struct FlickMenuMachine: Equatable, Sendable {
 
     /// Applies an event and returns the effects it produced.
     @discardableResult
+    // A reducer with one case per event.
+    // swiftlint:disable:next cyclomatic_complexity
     public mutating func send(_ event: FlickEvent) -> [FlickEffect] {
         switch event {
         case let .began(edge, position):

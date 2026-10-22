@@ -16,7 +16,9 @@ let package = Package(
         .target(name: "FlickCore"),
         // SwiftUI / UIKit layer.
         .target(name: "flickUI", dependencies: ["FlickCore"], resources: [.process("Resources")]),
-        .testTarget(name: "FlickCoreTests", dependencies: ["FlickCore"])
+        .testTarget(name: "FlickCoreTests", dependencies: ["FlickCore"]),
+        // Runs on iOS only; the files are empty elsewhere.
+        .testTarget(name: "flickUITests", dependencies: ["flickUI"])
     ],
     swiftLanguageModes: [.v6]
 )
