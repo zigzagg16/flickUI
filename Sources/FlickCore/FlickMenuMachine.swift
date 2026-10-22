@@ -112,7 +112,7 @@ public enum FlickEvent: Equatable, Sendable {
     case open(edge: FlickScreenEdge?)
     /// An item was tapped while the menu was presented.
     case chooseItem(Int)
-    /// A tap outside, the escape gesture, or a call from code.
+    /// A tap outside, the VoiceOver escape gesture, the Escape key, or a call from code.
     case dismiss
     /// The container, safe area or item count changed.
     case geometryChanged(FlickGeometry)

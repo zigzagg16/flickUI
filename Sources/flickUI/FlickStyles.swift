@@ -78,13 +78,16 @@ public struct FlickGlassIndicatorStyle: FlickIndicatorStyle {
             .font(.system(size: 18, weight: .semibold))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         if #available(iOS 26.0, *) {
+            // Liquid Glass adapts to Reduce Transparency itself.
             icon.glassEffect(.regular.tint(tint).interactive(), in: Capsule())
         } else {
             icon.background {
-                Capsule()
-                    .fill(.ultraThinMaterial)
-                    .overlay(Capsule().fill(tint?.opacity(0.35) ?? .clear))
-                    .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
+                FlickTransparencyReader { reducesTransparency in
+                    Capsule()
+                        .fill(reducesTransparency ? AnyShapeStyle(.background) : AnyShapeStyle(.ultraThinMaterial))
+                        .overlay(Capsule().fill(tint?.opacity(0.35) ?? .clear))
+                        .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
+                }
             }
         }
     }
@@ -276,13 +279,13 @@ struct FlickRowLabelStyle: LabelStyle {
         case .right:
             HStack(spacing: 10) {
                 configuration.icon
-                configuration.title
+                sideTitle(configuration)
             }
             // Physical order, whatever the layout direction.
             .environment(\.layoutDirection, .leftToRight)
         case .left:
             HStack(spacing: 10) {
-                configuration.title
+                sideTitle(configuration)
                 configuration.icon
             }
             .environment(\.layoutDirection, .leftToRight)
@@ -297,6 +300,13 @@ struct FlickRowLabelStyle: LabelStyle {
                 configuration.icon
             }
         }
+    }
+
+    /// At the largest text sizes, titles shrink rather than wrap out of their row.
+    private func sideTitle(_ configuration: Configuration) -> some View {
+        configuration.title
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
     }
 
     private func compactTitle(_ configuration: Configuration) -> some View {
@@ -360,10 +370,17 @@ public struct FlickMaterialBackgroundStyle: FlickMenuBackgroundStyle {
         self.dimming = dimming
     }
 
+    /// With Reduce Transparency on, it is the opaque system background instead.
     public func makeBody(configuration: Configuration) -> some View {
-        Rectangle()
-            .fill(material)
-            .overlay(Color.black.opacity(dimming))
+        FlickTransparencyReader { reducesTransparency in
+            if reducesTransparency {
+                Rectangle().fill(.background)
+            } else {
+                Rectangle()
+                    .fill(material)
+                    .overlay(Color.black.opacity(dimming))
+            }
+        }
     }
 }
 
@@ -396,10 +413,17 @@ public struct FlickGradientBackgroundStyle: FlickMenuBackgroundStyle {
         self.contentColorScheme = contentColorScheme ?? color.flickContentColorScheme
     }
 
+    /// With Reduce Transparency on, it is the colour at full opacity instead.
     public func makeBody(configuration: Configuration) -> some View {
         let toward = configuration.edge.indicatorSideAnchor
         let away = UnitPoint(x: 1 - toward.x, y: 1 - toward.y)
-        Rectangle().fill(LinearGradient(colors: [color, color.opacity(0)], startPoint: toward, endPoint: away))
+        FlickTransparencyReader { reducesTransparency in
+            if reducesTransparency {
+                Rectangle().fill(color.opacity(1))
+            } else {
+                Rectangle().fill(LinearGradient(colors: [color, color.opacity(0)], startPoint: toward, endPoint: away))
+            }
+        }
     }
 }
 
@@ -420,6 +444,16 @@ extension FlickMenuBackgroundStyle where Self == FlickGradientBackgroundStyle {
 }
 
 // MARK: - Helpers
+
+/// Reads Reduce Transparency for styles, whose `makeBody` can't read the environment itself.
+struct FlickTransparencyReader<Content: View>: View {
+    @Environment(\.accessibilityReduceTransparency) private var reducesTransparency
+    @ViewBuilder let content: (Bool) -> Content
+
+    var body: some View {
+        content(reducesTransparency)
+    }
+}
 
 extension Color {
     /// The colour scheme that keeps text legible on this colour: `.dark` on dark

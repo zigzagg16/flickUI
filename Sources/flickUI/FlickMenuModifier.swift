@@ -46,6 +46,8 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
     @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
+    /// How much the rows' text has grown with Dynamic Type.
+    @ScaledMetric(relativeTo: .title3) private var textScale: CGFloat = 1
 
     @State private var machine = FlickMenuMachine(
         configuration: FlickMenuConfiguration(),
@@ -89,8 +91,15 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
         layoutDirection == .rightToLeft
     }
 
+    /// Items grow with Dynamic Type so their text fits, up to a limit that keeps a
+    /// useful number of them on screen. Titles shrink to fit beyond it.
     private var layouts: FlickEdgeValues<FlickMenuLayout> {
-        settings.layout.resolved(isRightToLeft: isRightToLeft)
+        let scale = min(max(textScale, 1), 1.6)
+        return settings.layout.resolved(isRightToLeft: isRightToLeft).map { layout in
+            var layout = layout
+            layout.itemLength *= scale
+            return layout
+        }
     }
 
     private var configuration: FlickMenuConfiguration {
@@ -324,6 +333,10 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
             y: isVertical ? session.menuOffset + menuLength / 2 : cross / 2
         )
         .environment(\.colorScheme, backgroundStyle(for: edge).contentColorScheme ?? colorScheme)
+        // VoiceOver stays in the open menu, and the escape gesture closes it.
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isModal)
+        .accessibilityAction(.escape) { send(.dismiss, animation: closeAnimation) }
         .transition(.opacity.combined(with: .scale(scale: 0.96)))
     }
 
@@ -399,6 +412,10 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
                 .animation(indicatorAnimation, value: machine.indicator)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text("Menu", bundle: #bundle, comment: "Accessibility label of the button that opens the menu."))
+                // The indicator keeps its size at large text sizes; a long press shows it enlarged.
+                .accessibilityShowsLargeContentViewer {
+                    Label(title(element(at: index)), systemImage: systemImage(element(at: index)))
+                }
                 .accessibilityValue(Text(title(element(at: index))))
                 .accessibilityAddTraits(.isButton)
                 .accessibilityAction { send(.tapIndicator, animation: openAnimation) }
