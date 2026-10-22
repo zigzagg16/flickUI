@@ -112,6 +112,11 @@ public enum FlickEvent: Equatable, Sendable {
     case open(edge: FlickScreenEdge?)
     /// An item was tapped while the menu was presented.
     case chooseItem(Int)
+    /// Moves the highlight by a number of items in a menu opened without a swipe,
+    /// for example with the arrow keys.
+    case moveHighlight(by: Int)
+    /// Chooses the highlighted item, for example with the Return key.
+    case chooseHighlighted
     /// A tap outside, the VoiceOver escape gesture, the Escape key, or a call from code.
     case dismiss
     /// The container, safe area or item count changed.
@@ -228,6 +233,19 @@ public struct FlickMenuMachine: Equatable, Sendable {
         case let .chooseItem(index):
             guard let session, index >= 0, index < geometry.itemCount else { return [] }
             return choose(index, in: session)
+
+        case let .moveHighlight(offset):
+            guard var session, session.origin == .presentation else { return [] }
+            let index = Self.clampedIndex(session.highlightedIndex + offset, count: geometry.itemCount)
+            guard index != session.highlightedIndex else { return offset == 0 ? [] : [.boundaryReached] }
+            session.highlightedIndex = index
+            session.progress = CGFloat(index) + 0.5
+            phase = .open(session)
+            return [.highlighted(index)]
+
+        case .chooseHighlighted:
+            guard let session else { return [] }
+            return choose(session.highlightedIndex, in: session)
 
         case .dismiss:
             guard isOpen else { return [] }

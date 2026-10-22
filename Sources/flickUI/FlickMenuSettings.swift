@@ -74,6 +74,8 @@ struct FlickMenuSettings {
     var selection = FlickEdgeSettings(FlickMenuItemEmphasis.selected)
     var feedback = FlickMenuFeedback.default
     var defersSystemGestures = true
+    var keyboardShortcut: KeyboardShortcut?
+    var opensOnPencilSqueeze = false
     /// Handlers from `onFlickMenuEvent`, outermost first. They are references, not
     /// closures, so the environment can compare them.
     var eventHandlers: [FlickMenuEventHandler] = []
@@ -181,6 +183,22 @@ extension View {
     /// Control Center and the home indicator when the menu uses them. On by default.
     public func flickMenuDefersSystemGestures(_ defers: Bool) -> some View {
         transformEnvironment(\.flickMenuSettings) { $0.defersSystemGestures = defers }
+    }
+
+    /// A keyboard shortcut that opens and closes the menu. None by default.
+    ///
+    /// Whatever this is set to, while a menu opened without a swipe is shown the arrow
+    /// keys move through the items, Return chooses one and Escape closes it.
+    public func flickMenuKeyboardShortcut(_ shortcut: KeyboardShortcut?) -> some View {
+        transformEnvironment(\.flickMenuSettings) { $0.keyboardShortcut = shortcut }
+    }
+
+    /// Whether squeezing Apple Pencil Pro opens and closes the menu. Off by default.
+    ///
+    /// The squeeze is only used when the person's preferred squeeze action, in
+    /// Settings, is to show a contextual palette.
+    public func flickMenuOpensOnPencilSqueeze(_ opens: Bool = true) -> some View {
+        transformEnvironment(\.flickMenuSettings) { $0.opensOnPencilSqueeze = opens }
     }
 
     /// Observes menu events. Several handlers can be attached; all are called.

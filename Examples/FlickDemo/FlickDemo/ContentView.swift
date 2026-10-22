@@ -20,6 +20,8 @@ struct ContentView: View {
         .modifier(EdgeAppearanceModifier(appearance: settings.effectiveEnds, edges: .vertical))
         .flickMenuHome(settings.home, position: settings.homePosition)
         .flickMenuFeedback(settings.feedback.feedback)
+        .flickMenuKeyboardShortcut(KeyboardShortcut("m", modifiers: .command))
+        .flickMenuOpensOnPencilSqueeze()
         .onFlickMenuEvent { event in
             lastEvent = describe(event)
         }

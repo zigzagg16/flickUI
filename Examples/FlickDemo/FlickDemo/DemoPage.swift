@@ -1,3 +1,4 @@
+import flickUI
 import SwiftUI
 
 /// The menu items of the demo: one full-screen page each.
@@ -35,6 +36,7 @@ struct PageView: View {
     let page: DemoPage
     let lastEvent: String
     let onCustomize: () -> Void
+    @Environment(\.flickMenu) private var menu
 
     var body: some View {
         ZStack {
@@ -55,9 +57,12 @@ struct PageView: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(.ultraThinMaterial, in: Capsule())
-                Button("Customize", systemImage: "slider.horizontal.3", action: onCustomize)
-                    .buttonStyle(.borderedProminent)
-                    .tint(.white.opacity(0.25))
+                HStack {
+                    Button("Open Menu", systemImage: "list.bullet") { menu.open() }
+                    Button("Customize", systemImage: "slider.horizontal.3", action: onCustomize)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.white.opacity(0.25))
             }
             .foregroundStyle(.white)
         }

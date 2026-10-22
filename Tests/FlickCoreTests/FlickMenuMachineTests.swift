@@ -171,6 +171,27 @@ struct FlickMenuMachineTests {
         #expect(machine.send(.dismiss).isEmpty)
     }
 
+    @Test func keysMoveTheHighlightAndChoose() {
+        var machine = makeMachine(selectedIndex: 1)
+        machine.send(.tapIndicator)
+        #expect(machine.send(.moveHighlight(by: 1)) == [.highlighted(2)])
+        #expect(machine.session?.progress == 2.5)
+        #expect(machine.send(.moveHighlight(by: 10)) == [.highlighted(4)])
+        #expect(machine.send(.moveHighlight(by: 1)) == [.boundaryReached])
+        #expect(machine.send(.moveHighlight(by: -2)) == [.highlighted(2)])
+        #expect(machine.send(.chooseHighlighted) == [.chose(2)])
+        #expect(machine.selectedIndex == 2)
+    }
+
+    @Test func keysDoNothingDuringASwipeOrWhenClosed() {
+        var machine = makeMachine()
+        #expect(machine.send(.moveHighlight(by: 1)).isEmpty)
+        #expect(machine.send(.chooseHighlighted).isEmpty)
+        machine.send(.began(edge: .left, position: 300))
+        #expect(machine.send(.moveHighlight(by: 1)).isEmpty)
+        #expect(machine.session?.highlightedIndex == 0)
+    }
+
     @Test func invalidItemChoicesAreIgnored() {
         var machine = makeMachine()
         #expect(machine.send(.chooseItem(0)).isEmpty)

@@ -1,8 +1,23 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Choose Item" : {
+      "comment" : "Keyboard command that chooses the highlighted menu item."
+    },
+    "Close Menu" : {
+      "comment" : "Keyboard command that closes the menu."
+    },
     "Menu" : {
       "comment" : "Accessibility label of the button that opens the menu."
+    },
+    "Next Item" : {
+      "comment" : "Keyboard command that highlights the next menu item."
+    },
+    "Open Menu" : {
+      "comment" : "Keyboard command that opens or closes the menu."
+    },
+    "Previous Item" : {
+      "comment" : "Keyboard command that highlights the previous menu item."
     }
   },
   "version" : "1.0"

@@ -46,6 +46,7 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
     @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.preferredPencilSqueezeAction) private var preferredSqueezeAction
     /// How much the rows' text has grown with Dynamic Type.
     @ScaledMetric(relativeTo: .title3) private var textScale: CGFloat = 1
 
@@ -56,9 +57,12 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
     /// The overlay's origin in global coordinates, to convert gesture locations.
     @State private var origin: CGPoint = .zero
     @State private var ticks = FeedbackTicks()
+    @State private var controller = FlickMenuController()
 
     func body(content: Content) -> some View {
-        content
+        controller.perform = { command in perform(command) }
+        return content
+            .environment(\.flickMenu, FlickMenuAction(controller: controller))
             .gesture(edgeGesture(.left))
             .gesture(edgeGesture(.right))
             .gesture(edgeGesture(.top))
@@ -243,6 +247,17 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
         }
     }
 
+    private func perform(_ command: FlickMenuController.Command) {
+        switch command {
+        case let .open(edge):
+            send(.open(edge: edge?.resolved(isRightToLeft: isRightToLeft)), animation: openAnimation)
+        case .dismiss:
+            send(.dismiss, animation: closeAnimation)
+        case let .toggle(edge):
+            perform(machine.isOpen ? .dismiss : .open(edge))
+        }
+    }
+
     private func adjustSelection(_ direction: AccessibilityAdjustmentDirection) {
         guard !data.isEmpty else { return }
         let current = selectedIndex
@@ -284,6 +299,16 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
                 GeometryReader { local in
                     indicator(symbolFrame: anchor.map { local[$0] })
                 }
+            }
+            keyboardCommands
+            if settings.opensOnPencilSqueeze {
+                // A leaf view, so turning the setting on and off leaves the content alone.
+                Color.clear
+                    .frame(width: 0, height: 0)
+                    .onPencilSqueeze { phase in
+                        guard case .ended = phase, preferredSqueezeAction == .showContextualPalette else { return }
+                        perform(.toggle(nil))
+                    }
             }
         }
         .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
@@ -370,6 +395,7 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
             // Keep labels clear of the far side's safe area.
             .padding(edge.indicatorSideEdges, machine.geometry.safeAreaInsets[edge.opposite] + 28)
             .contentShape(Rectangle())
+            .hoverEffect(.highlight)
             .onTapGesture { send(.chooseItem(index), animation: closeAnimation) }
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
@@ -405,6 +431,7 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
                 .makeBody(configuration: configuration)
                 .frame(width: placement.size.width, height: placement.size.height)
                 .contentShape(Rectangle())
+                .hoverEffect()
                 .onTapGesture { send(.tapIndicator, animation: openAnimation) }
                 .position(placement.center)
                 // Opening, closing and choosing animate through `send`; while the finger
@@ -421,6 +448,50 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
                 .accessibilityAction { send(.tapIndicator, animation: openAnimation) }
                 .accessibilityAdjustableAction { direction in adjustSelection(direction) }
         }
+    }
+
+    /// Hidden buttons for hardware keyboards. They also list the commands in the
+    /// keyboard shortcuts overlay on iPad.
+    @ViewBuilder
+    private var keyboardCommands: some View {
+        let session = machine.session
+        let isPresented = session?.origin == .presentation
+        let isVertical = session?.edge.mainAxis == .vertical
+        ZStack {
+            if let shortcut = settings.keyboardShortcut {
+                commandButton(Text("Open Menu", bundle: #bundle, comment: "Keyboard command that opens or closes the menu.")) {
+                    perform(.toggle(nil))
+                }
+                .keyboardShortcut(shortcut)
+            }
+            if session != nil {
+                commandButton(Text("Close Menu", bundle: #bundle, comment: "Keyboard command that closes the menu.")) {
+                    send(.dismiss, animation: closeAnimation)
+                }
+                .keyboardShortcut(.cancelAction)
+            }
+            if isPresented {
+                commandButton(Text("Previous Item", bundle: #bundle, comment: "Keyboard command that highlights the previous menu item.")) {
+                    send(.moveHighlight(by: -1), animation: indicatorAnimation)
+                }
+                .keyboardShortcut(isVertical ? .upArrow : .leftArrow, modifiers: [])
+                commandButton(Text("Next Item", bundle: #bundle, comment: "Keyboard command that highlights the next menu item.")) {
+                    send(.moveHighlight(by: 1), animation: indicatorAnimation)
+                }
+                .keyboardShortcut(isVertical ? .downArrow : .rightArrow, modifiers: [])
+                commandButton(Text("Choose Item", bundle: #bundle, comment: "Keyboard command that chooses the highlighted menu item.")) {
+                    send(.chooseHighlighted, animation: closeAnimation)
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .frame(width: 0, height: 0)
+        .opacity(0)
+        .accessibilityHidden(true)
+    }
+
+    private func commandButton(_ title: Text, action: @escaping () -> Void) -> some View {
+        Button(action: action) { title }
     }
 
     /// A bead on the line of symbols, under the finger: it slides continuously from
