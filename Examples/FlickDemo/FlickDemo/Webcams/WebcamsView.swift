@@ -34,12 +34,21 @@ enum WebcamFeed: Identifiable, Hashable {
 /// Live motorway webcams from cita.lu. Two nested menus, one per side: the right
 /// edge switches between the live stream and the cameras, the left edge switches motorways.
 struct WebcamsView: View {
+    /// A camera to show, from a widget.
+    var link: WebcamLink?
+
     @State private var motorway = Motorway.a13.id
+    /// A camera to show once its motorway is selected.
+    @State private var requestedFeed: [Motorway: String] = [:]
     @State private var feedID = WebcamFeed.liveID
     @State private var pages: [Motorway: WebcamPage] = [:]
     @State private var loadError: String?
     /// Contained by default, so the camera stays visible around the menu.
     @State private var background = BackgroundChoice.panel
+
+    init(link: WebcamLink? = nil) {
+        self.link = link
+    }
 
     private var current: Motorway {
         Motorway(rawValue: motorway) ?? .a13
@@ -76,9 +85,20 @@ struct WebcamsView: View {
         .flickMenuIndicatorStyle(.morphing(.liquid, tint: .yellow), edges: .leading)
         .flickMenuBackground(DemoBackgroundStyle(choice: background))
         .onChange(of: motorway) {
-            // Stay on the live stream; otherwise start at the new motorway's first camera.
-            if feedID != WebcamFeed.liveID {
+            if let requested = requestedFeed.removeValue(forKey: current) {
+                feedID = requested
+            } else if feedID != WebcamFeed.liveID {
+                // Stay on the live stream; otherwise start at the new motorway's first camera.
                 feedID = pages[current]?.cameras.first?.id ?? WebcamFeed.liveID
+            }
+        }
+        .onChange(of: link, initial: true) { _, link in
+            guard let link else { return }
+            if link.motorway == current {
+                feedID = link.cameraID
+            } else {
+                requestedFeed[link.motorway] = link.cameraID
+                motorway = link.motorway.id
             }
         }
         .task(id: motorway) {

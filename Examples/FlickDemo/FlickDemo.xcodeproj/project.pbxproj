@@ -8,16 +8,52 @@
 
 /* Begin PBXBuildFile section */
 		F1C0000000000000000000B1 /* flickUI in Frameworks */ = {isa = PBXBuildFile; productRef = F1C0000000000000000000D1 /* flickUI */; };
+		F1C000000000000000000111 /* WebcamWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F1C000000000000000000101 /* WebcamWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		F1C000000000000000000112 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F1C000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F1C000000000000000000100;
+			remoteInfo = WebcamWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		F1C000000000000000000110 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F1C000000000000000000111 /* WebcamWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		F1C0000000000000000000A1 /* FlickDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlickDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F1C000000000000000000101 /* WebcamWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WebcamWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F1C0000000000000000000C2 /* FlickDemo */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = FlickDemo;
+			sourceTree = "<group>";
+		};
+		F1C000000000000000000102 /* WebcamWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WebcamWidget;
+			sourceTree = "<group>";
+		};
+		F1C000000000000000000103 /* CitaKit */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CitaKit;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -31,6 +67,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F1C000000000000000000105 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -38,6 +81,8 @@
 			isa = PBXGroup;
 			children = (
 				F1C0000000000000000000C2 /* FlickDemo */,
+				F1C000000000000000000103 /* CitaKit */,
+				F1C000000000000000000102 /* WebcamWidget */,
 				F1C0000000000000000000C3 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -46,6 +91,7 @@
 			isa = PBXGroup;
 			children = (
 				F1C0000000000000000000A1 /* FlickDemo.app */,
+				F1C000000000000000000101 /* WebcamWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -60,13 +106,16 @@
 				F1C0000000000000000000E1 /* Sources */,
 				F1C0000000000000000000E2 /* Frameworks */,
 				F1C0000000000000000000E3 /* Resources */,
+				F1C000000000000000000110 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				F1C000000000000000000113 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				F1C0000000000000000000C2 /* FlickDemo */,
+				F1C000000000000000000103 /* CitaKit */,
 			);
 			name = FlickDemo;
 			packageProductDependencies = (
@@ -75,6 +124,27 @@
 			productName = FlickDemo;
 			productReference = F1C0000000000000000000A1 /* FlickDemo.app */;
 			productType = "com.apple.product-type.application";
+		};
+		F1C000000000000000000100 /* WebcamWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F1C000000000000000000107 /* Build configuration list for PBXNativeTarget "WebcamWidget" */;
+			buildPhases = (
+				F1C000000000000000000104 /* Sources */,
+				F1C000000000000000000105 /* Frameworks */,
+				F1C000000000000000000106 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F1C000000000000000000102 /* WebcamWidget */,
+				F1C000000000000000000103 /* CitaKit */,
+			);
+			name = WebcamWidget;
+			productName = WebcamWidget;
+			productReference = F1C000000000000000000101 /* WebcamWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -87,6 +157,9 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					F1C000000000000000000010 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					F1C000000000000000000100 = {
 						CreatedOnToolsVersion = 16.0;
 					};
 				};
@@ -109,12 +182,20 @@
 			projectRoot = "";
 			targets = (
 				F1C000000000000000000010 /* FlickDemo */,
+				F1C000000000000000000100 /* WebcamWidget */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		F1C0000000000000000000E3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F1C000000000000000000106 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -131,7 +212,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F1C000000000000000000104 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F1C000000000000000000113 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F1C000000000000000000100 /* WebcamWidget */;
+			targetProxy = F1C000000000000000000112 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		F1C000000000000000000021 /* Debug */ = {
@@ -174,6 +270,7 @@
 				DEVELOPMENT_TEAM = NYMPRW2HUE;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "FlickDemo-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = flickUI;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -202,6 +299,7 @@
 				DEVELOPMENT_TEAM = NYMPRW2HUE;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "FlickDemo-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = flickUI;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -215,6 +313,56 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.flickui.FlickDemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F1C000000000000000000108 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = NYMPRW2HUE;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "WebcamWidget-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Webcams;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.flickui.FlickDemo.WebcamWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F1C000000000000000000109 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = NYMPRW2HUE;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "WebcamWidget-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Webcams;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.flickui.FlickDemo.WebcamWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
@@ -239,6 +387,15 @@
 			buildConfigurations = (
 				F1C000000000000000000023 /* Debug */,
 				F1C000000000000000000024 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F1C000000000000000000107 /* Build configuration list for PBXNativeTarget "WebcamWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F1C000000000000000000108 /* Debug */,
+				F1C000000000000000000109 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

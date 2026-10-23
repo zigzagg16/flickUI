@@ -58,6 +58,11 @@ struct Webcam: Identifiable, Hashable, Sendable {
         place.localizedCaseInsensitiveContains("tunnel") ? "mountain.2.fill" : "web.camera.fill"
     }
 
+    /// The usual image URL of a camera, for when its page can't be read.
+    static func defaultImageURL(forCamera id: String) -> URL {
+        CitaWebcams.baseURL.appending(path: "info_trafic/cameras/images/cccam_\(id).jpg")
+    }
+
     /// The image URL with a timestamp, the way cita.lu refreshes its images.
     func imageURL(at date: Date) -> URL {
         imageURL.appending(queryItems: [URLQueryItem(name: "t", value: String(Int(date.timeIntervalSince1970)))])

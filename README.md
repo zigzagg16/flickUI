@@ -119,7 +119,15 @@ The grid button switches to a second app, **Webcams**, which shows the live moto
 cameras from [cita.lu](https://www.cita.lu/fr/webcam/a13.html) with two nested
 menus, one per side: the right edge switches between the motorway's live stream and
 its cameras, and the left edge switches motorways. Their rows sit on a contained
-panel so the camera stays visible; the brush button tries the other backgrounds. cita.lu has no webcam API, so the app
+panel so the camera stays visible; the brush button tries the other backgrounds.
+
+The grid menu also sets which app opens at launch, stored in UserDefaults under
+`launchApp` (`showcase`, `webcams`, or unset to reopen the last one). The
+**Webcams** scheme passes `-launchApp webcams`, so it runs like a separate app.
+The cita.lu code lives in `Examples/FlickDemo/CitaKit`, shared with a **Webcams
+widget** (small, medium and large): pick a camera in the widget's settings, and it
+shows that camera's image, refreshed by WidgetKit about every 15 minutes. Tapping
+it opens the camera in the app. Widgets can't play video, so there's no live stream. cita.lu has no webcam API, so the app
 reads the camera list from each motorway's page and reloads each camera's JPEG every
 30 seconds. The live stream is the HLS playlist linked from the motorway's
 live-stream page, played muted until you unmute it.
