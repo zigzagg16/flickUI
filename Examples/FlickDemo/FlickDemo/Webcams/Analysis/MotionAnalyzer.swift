@@ -16,6 +16,12 @@ struct MotionReading: Equatable, Sendable {
     /// From 0 (nothing moves) to 1 (the most movement seen so far).
     var left: Double
     var right: Double
+    var measuredAt = Date.now
+
+    /// Older than a couple of looks: kept from an earlier visit of the camera.
+    var isFromEarlierVisit: Bool {
+        Date.now.timeIntervalSince(measuredAt) > 30
+    }
 
     enum Level {
         case still, slow, fast
@@ -52,6 +58,9 @@ struct LiveReading: Equatable, Sendable {
     var camera: LiveCamera?
     /// `nil` when the stream just changed camera, or cut between the two frames.
     var motion: MotionReading?
+    /// After a switch, the camera's reading from its previous visit, if recent enough
+    /// to be a hint. It is never passed off as current.
+    var previousVisit: MotionReading?
     /// The stream switched to another camera: the motion analysis starts over.
     var cameraChanged = false
 }
@@ -64,8 +73,11 @@ struct LiveReading: Equatable, Sendable {
 /// cameras and each camera keeps its own calibration.
 actor MotionAnalyzer {
     /// The fastest movement seen per camera label, slowly forgotten, so readings are
-    /// relative to each camera's usual traffic.
-    private var peaks: [String: Double] = [:]
+    /// relative to each camera's usual traffic. Kept between launches.
+    private var peaks: [String: Double]
+    /// Each camera's last reading, shown again when the stream comes back to it.
+    private var lastReadings: [String: MotionReading] = [:]
+    private var readingsSinceSave = 0
     private var camera: LiveCamera?
     /// A new label read once: it takes over when read again, so one misread doesn't
     /// count as a switch.
@@ -77,6 +89,13 @@ actor MotionAnalyzer {
 
     /// Mean brightness difference, 0–255, above which two frames show different scenes.
     private static let cutThreshold: Float = 28
+    /// How long a camera's last reading stays worth showing when it comes back.
+    private static let previousVisitLifetime: TimeInterval = 15 * 60
+    private static let peaksKey = "liveMotionPeaks"
+
+    init() {
+        peaks = UserDefaults.standard.dictionary(forKey: Self.peaksKey) as? [String: Double] ?? [:]
+    }
 
     /// Flow below this, in pixels between the two frames, is noise.
     private static let noise: Float = 0.3
@@ -96,9 +115,30 @@ actor MotionAnalyzer {
         let changed = updateCamera(with: Self.readCamera(in: second.buffer), cut: cutBetweenLooks || cutWithinPair)
         // Movement across a cut, or right after a switch, means nothing.
         guard !changed, !cutWithinPair else {
-            return LiveReading(camera: camera, motion: nil, cameraChanged: changed)
+            if changed { savePeaks() }
+            return LiveReading(camera: camera, motion: nil, previousVisit: changed ? previousVisit() : nil, cameraChanged: changed)
         }
-        return LiveReading(camera: camera, motion: motion(from: first, to: second, peakKey: camera?.label ?? ""))
+        let key = camera?.label ?? ""
+        let reading = motion(from: first, to: second, peakKey: key)
+        if let reading {
+            lastReadings[key] = reading
+            readingsSinceSave += 1
+            if readingsSinceSave >= 15 { savePeaks() }
+        }
+        return LiveReading(camera: camera, motion: reading)
+    }
+
+    /// The current camera's reading from its previous visit, if recent enough.
+    private func previousVisit() -> MotionReading? {
+        guard let label = camera?.label, let reading = lastReadings[label],
+              Date.now.timeIntervalSince(reading.measuredAt) < Self.previousVisitLifetime
+        else { return nil }
+        return reading
+    }
+
+    private func savePeaks() {
+        UserDefaults.standard.set(peaks, forKey: Self.peaksKey)
+        readingsSinceSave = 0
     }
 
     /// Takes in the camera read from the picture. Returns whether the stream switched camera.

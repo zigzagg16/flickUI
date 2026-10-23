@@ -115,10 +115,12 @@ struct LiveStreamView: View {
             withAnimation(.smooth) {
                 liveCamera = reading.camera
                 // A new camera starts over; a cut alone keeps the last reading.
+                // A camera seen before shows its last reading, marked as such, until
+                // a new one comes in.
                 if let measured = reading.motion {
                     motion = measured
                 } else if reading.cameraChanged {
-                    motion = nil
+                    motion = reading.previousVisit
                 }
             }
         }
@@ -148,8 +150,16 @@ struct MotionBadge: View {
                     .foregroundStyle(.secondary)
             }
             if let reading {
-                side("Left", reading.left)
-                side("Right", reading.right)
+                Group {
+                    side("Left", reading.left)
+                    side("Right", reading.right)
+                }
+                .opacity(reading.isFromEarlierVisit ? 0.5 : 1)
+                if reading.isFromEarlierVisit {
+                    Text("Seen \(reading.measuredAt, style: .relative) ago")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             } else {
                 Text("Measuring…")
             }
