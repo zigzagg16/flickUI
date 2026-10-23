@@ -45,6 +45,7 @@ struct WebcamsView: View {
     @State private var loadError: String?
     /// Contained by default, so the camera stays visible around the menu.
     @State private var background = BackgroundChoice.panel
+    @State private var monitor = RoadMonitor()
 
     init(link: WebcamLink? = nil) {
         self.link = link
@@ -73,12 +74,14 @@ struct WebcamsView: View {
             title: pages[current]?.title ?? current.title,
             feed: feed,
             position: cameraPosition,
+            report: currentReport,
             error: loadError,
             background: $background
         ) {
             Task { await load(current) }
         }
-        .flickMenu(feeds, selection: $feedID, edges: .trailing, title: \.title, systemImage: \.symbol)
+        .environment(monitor)
+        .flickMenu(feeds, selection: $feedID, edges: .trailing, title: \.title, systemImage: { symbol(for: $0) })
         .flickMenuHome(.trailing, position: 0.4)
         .flickMenu(Motorway.allCases, selection: $motorway, edges: .leading, title: \.title, systemImage: \.symbol)
         .flickMenuHome(.leading, position: 0.4)
@@ -104,6 +107,22 @@ struct WebcamsView: View {
         .task(id: motorway) {
             await load(current)
         }
+        .task(id: cameras) {
+            await monitor.watch(cameras)
+        }
+    }
+
+    private var currentReport: RoadReport? {
+        guard case let .camera(camera) = feed else { return nil }
+        return monitor.report(for: camera)
+    }
+
+    /// A camera's symbol in the menu shows its situation when something stands out.
+    private func symbol(for feed: WebcamFeed) -> String {
+        if case let .camera(camera) = feed, let symbol = monitor.report(for: camera)?.symbol {
+            return symbol
+        }
+        return feed.symbol
     }
 
     /// The camera's place among the cameras, 1-based, and their number.
@@ -134,6 +153,7 @@ struct WebcamScreen: View {
     let title: String
     let feed: WebcamFeed
     let position: (index: Int, count: Int)?
+    let report: RoadReport?
     let error: String?
     @Binding var background: BackgroundChoice
     let retry: () -> Void
@@ -174,6 +194,10 @@ struct WebcamScreen: View {
                     Text(camera.direction)
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.8))
+                    if let report, !report.conditions.isEmpty {
+                        RoadReportBadge(report: report)
+                            .padding(.top, 4)
+                    }
                 }
                 if let error {
                     Button("Cameras unavailable. Retry", systemImage: "arrow.clockwise", action: retry)
@@ -224,6 +248,7 @@ struct WebcamImage: View {
     @State private var imageCameraID: String?
     @State private var updated: Date?
     @State private var failed = false
+    @Environment(RoadMonitor.self) private var monitor
 
     private static let refreshInterval = Duration.seconds(30)
 
@@ -279,14 +304,36 @@ struct WebcamImage: View {
                     }
                     updated = .now
                     failed = false
+                    await monitor.record(data, for: camera)
                 } else {
                     failed = !isCurrent
                 }
             } catch {
-                if !Task.isCancelled { failed = !isCurrent }
+                if !Task.isCancelled {
+                    failed = !isCurrent
+                    monitor.recordFailure(for: camera)
+                }
             }
             try? await Task.sleep(for: Self.refreshInterval)
         }
+    }
+}
+
+/// The conditions read from a camera's picture.
+struct RoadReportBadge: View {
+    let report: RoadReport
+
+    var body: some View {
+        Label {
+            Text(report.conditions.joined(separator: " · "))
+        } icon: {
+            Image(systemName: report.symbol ?? "eye.fill")
+        }
+        .font(.caption.weight(.semibold))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(.ultraThinMaterial, in: Capsule())
+        .accessibilityLabel(Text("Estimated from the picture: \(report.conditions.joined(separator: ", "))"))
     }
 }
 
