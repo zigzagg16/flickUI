@@ -16,6 +16,8 @@ struct LiveStreamView: View {
     @State private var videoOutput: AVPlayerItemVideoOutput?
     @State private var motionAnalyzer = MotionAnalyzer()
     @State private var motion: MotionReading?
+    /// The camera the stream shows now, read from the picture.
+    @State private var liveCamera: LiveCamera?
     @AppStorage("analyzesLiveMotion") private var analyzesMotion = true
 
     /// The time between the two frames compared: short enough for optical flow to
@@ -50,8 +52,8 @@ struct LiveStreamView: View {
                 .padding()
             }
             .overlay(alignment: .bottomTrailing) {
-                if let motion, isPlaying, !failed {
-                    MotionBadge(reading: motion)
+                if isPlaying, !failed, motion != nil || liveCamera != nil {
+                    MotionBadge(camera: liveCamera, reading: motion)
                         .padding()
                 }
             }
@@ -84,8 +86,9 @@ struct LiveStreamView: View {
         let item = AVPlayerItem(url: url)
         let output = AVPlayerItemVideoOutput(pixelBufferAttributes: [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
-            kCVPixelBufferWidthKey as String: 320,
-            kCVPixelBufferHeightKey as String: 180
+            // Large enough to read the camera label burnt into the picture.
+            kCVPixelBufferWidthKey as String: 640,
+            kCVPixelBufferHeightKey as String: 360
         ])
         item.add(output)
         videoOutput = output
@@ -100,14 +103,23 @@ struct LiveStreamView: View {
     /// Compares two frames a moment apart every few seconds while the stream plays.
     private func measureMotion() async {
         motion = nil
+        liveCamera = nil
         guard analyzesMotion else { return }
         while !Task.isCancelled {
             try? await Task.sleep(for: Self.motionInterval)
             guard isPlaying, let first = currentFrame() else { continue }
             try? await Task.sleep(for: Self.frameGap)
             guard let second = currentFrame() else { continue }
-            if let reading = await motionAnalyzer.motion(from: first, to: second), !Task.isCancelled {
-                withAnimation(.smooth) { motion = reading }
+            let reading = await motionAnalyzer.analyze(from: first, to: second)
+            guard !Task.isCancelled else { return }
+            withAnimation(.smooth) {
+                liveCamera = reading.camera
+                // A new camera starts over; a cut alone keeps the last reading.
+                if let measured = reading.motion {
+                    motion = measured
+                } else if reading.cameraChanged {
+                    motion = nil
+                }
             }
         }
     }
@@ -121,12 +133,26 @@ struct LiveStreamView: View {
 
 /// The movement on each carriageway of the live stream.
 struct MotionBadge: View {
-    let reading: MotionReading
+    let camera: LiveCamera?
+    let reading: MotionReading?
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 4) {
-            side("Left", reading.left)
-            side("Right", reading.right)
+            if let camera {
+                if let caption = camera.caption {
+                    Text(caption)
+                        .lineLimit(1)
+                }
+                Text(camera.label)
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.secondary)
+            }
+            if let reading {
+                side("Left", reading.left)
+                side("Right", reading.right)
+            } else {
+                Text("Measuring…")
+            }
         }
         .font(.caption.weight(.semibold))
         .padding(.horizontal, 10)
