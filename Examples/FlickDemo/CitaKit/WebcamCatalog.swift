@@ -5,9 +5,8 @@ import Foundation
 ///
 /// Nothing here is tied to cita.lu: the backend can point at any source, rename
 /// places, add or retire cameras and change refresh rates without an app update.
-/// The app doesn't load it yet; it still reads cita.lu's pages directly.
-///
-/// See `Examples/FlickDemo/Backend/catalog.sample.json` for an example.
+/// ``CatalogStore`` loads it; `catalog.json`, bundled with the app, is the catalog
+/// until there is a backend.
 struct WebcamCatalog: Codable, Hashable, Sendable {
     /// The format's version, so an older app can tell a catalog it doesn't understand.
     var version: Int
@@ -120,16 +119,54 @@ extension WebcamCatalog {
     }
 }
 
+/// The motorways the app shows come from the catalog.
+typealias Motorway = WebcamCatalog.Motorway
+
+extension WebcamCatalog {
+    /// A catalog with nothing in it, for when none can be read.
+    static let empty = WebcamCatalog(
+        version: 1,
+        updatedAt: .distantPast,
+        source: Source(name: "", website: URL(filePath: "/")),
+        motorways: [],
+        settings: Settings()
+    )
+
+    func motorway(withID id: String) -> Motorway? {
+        motorways.first { $0.id == id }
+    }
+
+    /// The app's camera model for a catalog camera, with the default refresh applied.
+    func webcam(for camera: Camera) -> Webcam {
+        camera.webcam(defaultRefresh: settings.imageRefreshInterval)
+    }
+}
+
 extension WebcamCatalog.Motorway {
     /// The cameras to show.
     var enabledCameras: [WebcamCatalog.Camera] {
         cameras.filter { $0.isEnabled ?? true }
     }
+
+    /// "A13 : Autoroute de la Sarre".
+    var title: String {
+        "\(code) : \(name)"
+    }
+
+    var menuSymbol: String {
+        symbol ?? "road.lanes"
+    }
 }
 
 extension WebcamCatalog.Camera {
     /// The app's camera model, as the screens and analysis use it.
-    var webcam: Webcam {
-        Webcam(id: id, place: place, direction: direction.map { "direction \($0)" } ?? "", imageURL: imageURL)
+    func webcam(defaultRefresh: TimeInterval? = nil) -> Webcam {
+        Webcam(
+            id: id,
+            place: place,
+            direction: direction.map { "direction \($0)" } ?? "",
+            imageURL: imageURL,
+            refreshInterval: refreshInterval ?? defaultRefresh
+        )
     }
 }

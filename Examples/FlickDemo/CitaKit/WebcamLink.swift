@@ -5,7 +5,8 @@ import Foundation
 struct WebcamLink: Hashable, Sendable {
     static let scheme = "flickdemo"
 
-    let motorway: Motorway
+    /// The motorway's catalog identifier.
+    let motorwayID: String
     /// A camera number, or `WebcamLink.live` for the motorway's live stream.
     let cameraID: String
     /// Makes every opening of a link a change, even of the same camera.
@@ -13,24 +14,24 @@ struct WebcamLink: Hashable, Sendable {
 
     static let live = "live"
 
-    init(motorway: Motorway, cameraID: String) {
-        self.motorway = motorway
+    init(motorwayID: String, cameraID: String) {
+        self.motorwayID = motorwayID
         self.cameraID = cameraID
     }
 
     init?(url: URL) {
         let parts = url.pathComponents.filter { $0 != "/" }
         guard url.scheme == Self.scheme, url.host() == "webcams",
-              let first = parts.first, let motorway = Motorway(rawValue: first)
+              let motorwayID = parts.first
         else { return nil }
-        self.init(motorway: motorway, cameraID: parts.count > 1 ? parts[1] : Self.live)
+        self.init(motorwayID: motorwayID, cameraID: parts.count > 1 ? parts[1] : Self.live)
     }
 
     var url: URL {
         var components = URLComponents()
         components.scheme = Self.scheme
         components.host = "webcams"
-        components.path = "/\(motorway.rawValue)/\(cameraID)"
+        components.path = "/\(motorwayID)/\(cameraID)"
         return components.url ?? URL(filePath: "/")
     }
 }

@@ -25,7 +25,8 @@ struct WebcamWidget: Widget {
 
 struct WebcamEntry: TimelineEntry {
     let date: Date
-    let camera: WebcamEntity
+    /// `nil` when the catalog has no camera to show.
+    let camera: WebcamEntity?
     /// The JPEG, or `nil` if it couldn't be loaded.
     let imageData: Data?
     /// What the app last read from this camera, if recent.
@@ -50,7 +51,9 @@ struct WebcamProvider: AppIntentTimelineProvider {
     }
 
     private func entry(for configuration: SelectWebcamIntent) async -> WebcamEntry {
-        let camera = configuration.camera ?? .fallback
+        guard let camera = configuration.camera ?? .fallback else {
+            return WebcamEntry(date: .now, camera: nil, imageData: nil)
+        }
         let data = try? await CitaWebcams.image(of: camera.webcam)
         return WebcamEntry(date: .now, camera: camera, imageData: data, report: RoadReportStore.report(forCamera: camera.cameraID))
     }
@@ -61,9 +64,25 @@ struct WebcamWidgetView: View {
     @Environment(\.widgetFamily) private var family
 
     var body: some View {
+        Group {
+            if let camera = entry.camera {
+                content(camera)
+                    .widgetURL(camera.link.url)
+            } else {
+                Text("No webcams")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+            }
+        }
+        .containerBackground(for: .widget) {
+            background
+        }
+    }
+
+    private func content(_ camera: WebcamEntity) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
-                Text(entry.camera.motorway.code)
+                Text(camera.motorwayCode)
                     .font(.caption2.bold())
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
@@ -82,11 +101,11 @@ struct WebcamWidgetView: View {
                     .padding(.vertical, 2)
                     .background(.black.opacity(0.45), in: Capsule())
             }
-            Text(entry.camera.place)
+            Text(camera.place)
                 .font(family == .systemSmall ? .subheadline.bold() : .headline)
                 .lineLimit(1)
             if family != .systemSmall {
-                Text(entry.camera.direction)
+                Text(camera.direction)
                     .font(.caption)
                     .lineLimit(1)
                     .opacity(0.85)
@@ -95,10 +114,6 @@ struct WebcamWidgetView: View {
         .foregroundStyle(.white)
         .shadow(color: .black.opacity(0.6), radius: 3)
         .padding(12)
-        .containerBackground(for: .widget) {
-            background
-        }
-        .widgetURL(WebcamLink(motorway: entry.camera.motorway, cameraID: entry.camera.cameraID).url)
     }
 
     private var background: some View {

@@ -5,22 +5,24 @@ import Vision
 
 /// Finds vehicles in a picture with a Core ML object detector run through Vision.
 ///
-/// The model is Apple's YOLOv3 Tiny, trained on the COCO classes, which include cars,
-/// trucks, buses and motorbikes. It is downloaded and compiled on the device the first
-/// time vehicle detection is turned on, rather than shipped in the repository. A model
-/// named `VehicleDetector` added to the app target is used instead when present.
+/// The model is an object detector trained on the COCO classes, which include cars,
+/// trucks, buses and motorbikes, such as Apple's YOLOv3 Tiny. It is downloaded from
+/// the catalog's `vehicleModelURL` and compiled on the device the first time vehicle
+/// detection is turned on, rather than shipped in the repository. A model named
+/// `VehicleDetector` added to the app target is used instead when present.
 final class VehicleDetector {
-    /// From developer.apple.com/machine-learning/models.
-    static let modelURL = URL(string: "https://ml-assets.apple.com/coreml/models/Image/ObjectDetection/YOLOv3Tiny/YOLOv3TinyFP16.mlmodel")!
-
     static let vehicleLabels: Set<String> = ["car", "truck", "bus", "motorbike", "motorcycle"]
     static let minimumConfidence: Float = 0.3
 
     enum InstallError: LocalizedError {
+        case noModel
         case download
 
         var errorDescription: String? {
-            "The vehicle detection model couldn't be downloaded."
+            switch self {
+            case .noModel: "No vehicle detection model is configured."
+            case .download: "The vehicle detection model couldn't be downloaded."
+            }
         }
     }
 
@@ -42,8 +44,9 @@ final class VehicleDetector {
     }
 
     /// Downloads and compiles the model, unless it is already there.
-    static func install() async throws {
+    static func install(from modelURL: URL?) async throws {
         guard !isInstalled else { return }
+        guard let modelURL else { throw InstallError.noModel }
         let (downloaded, response) = try await URLSession.shared.download(from: modelURL)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             throw InstallError.download

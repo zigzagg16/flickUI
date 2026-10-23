@@ -8,84 +8,95 @@ struct WebcamEntity: AppEntity {
 
     /// "a13/13034".
     let id: String
-    let motorway: Motorway
+    let motorwayID: String
+    /// The road number, such as "A13".
+    let motorwayCode: String
     let cameraID: String
     let place: String
     let direction: String
     let imageURL: URL
-
-    /// Shown until a camera is chosen: the first camera of the A13.
-    static let fallback = WebcamEntity(motorway: .a13, cameraID: "13034", place: "Sanem", direction: "direction Pétange")
-
-    init(motorway: Motorway, cameraID: String, place: String, direction: String, imageURL: URL? = nil) {
-        id = "\(motorway.rawValue)/\(cameraID)"
-        self.motorway = motorway
-        self.cameraID = cameraID
-        self.place = place
-        self.direction = direction
-        self.imageURL = imageURL ?? Webcam.defaultImageURL(forCamera: cameraID)
-    }
+    let refreshInterval: TimeInterval?
 
     init(_ camera: Webcam, on motorway: Motorway) {
-        self.init(motorway: motorway, cameraID: camera.id, place: camera.place, direction: camera.direction, imageURL: camera.imageURL)
+        id = "\(motorway.id)/\(camera.id)"
+        motorwayID = motorway.id
+        motorwayCode = motorway.code
+        cameraID = camera.id
+        place = camera.place
+        direction = camera.direction
+        imageURL = camera.imageURL
+        refreshInterval = camera.refreshInterval
+    }
+
+    /// Shown until a camera is chosen: the catalog's first camera.
+    static var fallback: WebcamEntity? {
+        let catalog = CatalogStore.current()
+        for motorway in catalog.orderedMotorways {
+            if let camera = motorway.enabledCameras.first {
+                return WebcamEntity(catalog.webcam(for: camera), on: motorway)
+            }
+        }
+        return nil
     }
 
     var webcam: Webcam {
-        Webcam(id: cameraID, place: place, direction: direction, imageURL: imageURL)
+        Webcam(id: cameraID, place: place, direction: direction, imageURL: imageURL, refreshInterval: refreshInterval)
+    }
+
+    var link: WebcamLink {
+        WebcamLink(motorwayID: motorwayID, cameraID: cameraID)
     }
 
     var displayRepresentation: DisplayRepresentation {
-        DisplayRepresentation(title: "\(place)", subtitle: "\(motorway.code) · \(direction)")
+        DisplayRepresentation(title: "\(place)", subtitle: "\(motorwayCode) · \(direction)")
     }
 }
 
-/// Lists the cameras of every motorway from cita.lu.
+/// Lists the cameras of every motorway in the catalog, reading the source's page for
+/// motorways the catalog lists without cameras.
 struct WebcamQuery: EntityStringQuery {
     func entities(for identifiers: [WebcamEntity.ID]) async throws -> [WebcamEntity] {
-        let wanted = identifiers.compactMap(Self.parse)
-        let pages = await Self.pages(for: Set(wanted.map(\.motorway)))
-        return wanted.map { motorway, cameraID in
-            if let camera = pages[motorway]?.cameras.first(where: { $0.id == cameraID }) {
-                return WebcamEntity(camera, on: motorway)
-            }
-            return WebcamEntity(motorway: motorway, cameraID: cameraID, place: "Camera \(cameraID)", direction: motorway.title)
-        }
+        let wanted = Set(identifiers)
+        return await Self.allCameras().filter { wanted.contains($0.id) }
     }
 
     func entities(matching string: String) async throws -> [WebcamEntity] {
-        try await suggestedEntities().filter { camera in
+        await Self.allCameras().filter { camera in
             camera.place.localizedCaseInsensitiveContains(string)
                 || camera.direction.localizedCaseInsensitiveContains(string)
-                || camera.motorway.code.localizedCaseInsensitiveContains(string)
+                || camera.motorwayCode.localizedCaseInsensitiveContains(string)
         }
     }
 
     func suggestedEntities() async throws -> [WebcamEntity] {
-        let pages = await Self.pages(for: Set(Motorway.allCases))
-        return Motorway.allCases.flatMap { motorway in
-            (pages[motorway]?.cameras ?? []).map { WebcamEntity($0, on: motorway) }
-        }
+        await Self.allCameras()
     }
 
     func defaultResult() async -> WebcamEntity? {
         .fallback
     }
 
-    private static func parse(_ id: String) -> (motorway: Motorway, cameraID: String)? {
-        let parts = id.split(separator: "/", maxSplits: 1).map(String.init)
-        guard parts.count == 2, let motorway = Motorway(rawValue: parts[0]) else { return nil }
-        return (motorway, parts[1])
+    private static func allCameras() async -> [WebcamEntity] {
+        let catalog = await CatalogStore.refreshed()
+        let motorways = catalog.orderedMotorways
+        let pages = await Self.pages(for: motorways.filter { $0.enabledCameras.isEmpty })
+        return motorways.flatMap { motorway in
+            let listed = motorway.enabledCameras.map(catalog.webcam(for:))
+            let cameras = listed.isEmpty ? pages[motorway.id]?.cameras ?? [] : listed
+            return cameras.map { WebcamEntity($0, on: motorway) }
+        }
     }
 
-    /// The pages that load; the others are left out.
-    private static func pages(for motorways: Set<Motorway>) async -> [Motorway: WebcamPage] {
-        await withTaskGroup(of: (Motorway, WebcamPage?).self) { group in
+    /// The pages that load, by motorway; the others are left out.
+    private static func pages(for motorways: [Motorway]) async -> [String: WebcamPage] {
+        await withTaskGroup(of: (String, WebcamPage?).self) { group in
             for motorway in motorways {
-                group.addTask { (motorway, try? await CitaWebcams.page(for: motorway)) }
+                guard let website = motorway.website else { continue }
+                group.addTask { (motorway.id, try? await CitaWebcams.page(at: website)) }
             }
-            var pages: [Motorway: WebcamPage] = [:]
-            for await (motorway, page) in group {
-                pages[motorway] = page
+            var pages: [String: WebcamPage] = [:]
+            for await (id, page) in group {
+                pages[id] = page
             }
             return pages
         }

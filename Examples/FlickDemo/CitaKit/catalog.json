@@ -1,0 +1,257 @@
+{
+  "version": 1,
+  "updatedAt": "2026-10-23T14:30:00Z",
+  "source": {
+    "name": "CITA",
+    "website": "https://www.cita.lu",
+    "attribution": "Pictures and streams: CITA, Administration des ponts et chaussées"
+  },
+  "settings": {
+    "catalogMaxAge": 86400,
+    "imageRefreshInterval": 30,
+    "vehicleModelURL": "https://ml-assets.apple.com/coreml/models/Image/ObjectDetection/YOLOv3Tiny/YOLOv3TinyFP16.mlmodel"
+  },
+  "motorways": [
+    {
+      "id": "a1",
+      "code": "A1",
+      "name": "Autoroute Luxembourg - Trèves",
+      "shortName": "A1 Trèves",
+      "symbol": "1.circle.fill",
+      "order": 1,
+      "website": "https://www.cita.lu/fr/webcam/a1.html",
+      "liveStream": {
+        "url": "https://live-edge.rtl.lu/cita/cita_a1/playlist.m3u8",
+        "startsMuted": true
+      },
+      "trafficMap": {
+        "imageURL": "https://www.cita.lu/webcam/service/a1",
+        "refreshInterval": 60
+      },
+      "cameras": []
+    },
+    {
+      "id": "a3",
+      "code": "A3",
+      "name": "Autoroute de Dudelange",
+      "shortName": "A3 Dudelange",
+      "symbol": "3.circle.fill",
+      "order": 2,
+      "website": "https://www.cita.lu/fr/webcam/a3.html",
+      "liveStream": {
+        "url": "https://live-edge.rtl.lu/cita/cita_a3/playlist.m3u8",
+        "startsMuted": true
+      },
+      "trafficMap": {
+        "imageURL": "https://www.cita.lu/webcam/service/a3",
+        "refreshInterval": 60
+      },
+      "cameras": []
+    },
+    {
+      "id": "a4",
+      "code": "A4",
+      "name": "Autoroute d'Esch-sur-Alzette",
+      "shortName": "A4 Esch",
+      "symbol": "4.circle.fill",
+      "order": 3,
+      "website": "https://www.cita.lu/fr/webcam/a4.html",
+      "liveStream": {
+        "url": "https://live-edge.rtl.lu/cita/cita_a4/playlist.m3u8",
+        "startsMuted": true
+      },
+      "trafficMap": {
+        "imageURL": "https://www.cita.lu/webcam/service/a4",
+        "refreshInterval": 60
+      },
+      "cameras": []
+    },
+    {
+      "id": "a6",
+      "code": "A6",
+      "name": "Autoroute d'Arlon",
+      "shortName": "A6 Arlon",
+      "symbol": "6.circle.fill",
+      "order": 4,
+      "website": "https://www.cita.lu/fr/webcam/a6.html",
+      "liveStream": {
+        "url": "https://live-edge.rtl.lu/cita/cita_a6/playlist.m3u8",
+        "startsMuted": true
+      },
+      "trafficMap": {
+        "imageURL": "https://www.cita.lu/webcam/service/a6",
+        "refreshInterval": 60
+      },
+      "cameras": []
+    },
+    {
+      "id": "a7",
+      "code": "A7",
+      "name": "Autoroute du Nord",
+      "shortName": "A7 Nord",
+      "symbol": "7.circle.fill",
+      "order": 5,
+      "website": "https://www.cita.lu/fr/webcam/a7.html",
+      "liveStream": {
+        "url": "https://live-edge.rtl.lu/cita/cita_a7/playlist.m3u8",
+        "startsMuted": true
+      },
+      "trafficMap": {
+        "imageURL": "https://www.cita.lu/webcam/service/a7",
+        "refreshInterval": 60
+      },
+      "cameras": []
+    },
+    {
+      "id": "a13",
+      "code": "A13",
+      "name": "Autoroute de la Sarre",
+      "shortName": "A13 Sarre",
+      "symbol": "13.circle.fill",
+      "order": 6,
+      "website": "https://www.cita.lu/fr/webcam/a13.html",
+      "liveStream": {
+        "url": "https://live-edge.rtl.lu/cita/cita_a13/playlist.m3u8",
+        "startsMuted": true
+      },
+      "trafficMap": {
+        "imageURL": "https://www.cita.lu/webcam/service/a13",
+        "refreshInterval": 60
+      },
+      "cameras": [
+        {
+          "id": "13034",
+          "place": "Sanem",
+          "direction": "Pétange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13034.jpg"
+        },
+        {
+          "id": "13035",
+          "place": "Differdange",
+          "direction": "Tunnel Aessen",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13035.jpg"
+        },
+        {
+          "id": "147",
+          "place": "Differdange",
+          "direction": "Tunnel Aessen",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_147.jpg"
+        },
+        {
+          "id": "13039",
+          "place": "Tunnel Aessen",
+          "direction": "Tunnel Ehlerange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13039.jpg"
+        },
+        {
+          "id": "13042",
+          "place": "Jonction Lankelz",
+          "direction": "Tunnel Ehlerange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13042.jpg"
+        },
+        {
+          "id": "13043",
+          "place": "Jonction Lankelz",
+          "direction": "Tunnel Ehlerange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13043.jpg"
+        },
+        {
+          "id": "13050",
+          "place": "Kayl",
+          "direction": "Schifflange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13050.jpg"
+        },
+        {
+          "id": "13051",
+          "place": "Kayl",
+          "direction": "Dudelange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13051.jpg"
+        },
+        {
+          "id": "164",
+          "place": "Dudelange",
+          "direction": "Croix de Bettembourg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_164.jpg"
+        },
+        {
+          "id": "13054",
+          "place": "Croix de Bettembourg",
+          "direction": "Dudelange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13054.jpg"
+        },
+        {
+          "id": "13055",
+          "place": "Hellange",
+          "direction": "Croix de Bettembourg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13055.jpg"
+        },
+        {
+          "id": "13057",
+          "place": "Hellange",
+          "direction": "Frisange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13057.jpg"
+        },
+        {
+          "id": "13060",
+          "place": "Altwies",
+          "direction": "Frisange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13060.jpg"
+        },
+        {
+          "id": "13062",
+          "place": "Altwies",
+          "direction": "Mondorf",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13062.jpg"
+        },
+        {
+          "id": "13016",
+          "place": "Mondorf",
+          "direction": "Altwies",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13016.jpg"
+        },
+        {
+          "id": "13065",
+          "place": "Altwies",
+          "direction": "Mondorf",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13065.jpg"
+        },
+        {
+          "id": "13066",
+          "place": "Mondorf",
+          "direction": "Altwies",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13066.jpg"
+        },
+        {
+          "id": "13070",
+          "place": "Tunnel Markusbierg",
+          "direction": "Mondorf",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13070.jpg"
+        },
+        {
+          "id": "13071",
+          "place": "Mondorf",
+          "direction": "Markusbierg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13071.jpg"
+        },
+        {
+          "id": "13072",
+          "place": "Tunnel Markusbierg",
+          "direction": "Mondorf",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13072.jpg"
+        },
+        {
+          "id": "13073",
+          "place": "Schengen",
+          "direction": "Allemagne",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13073.jpg"
+        },
+        {
+          "id": "13074",
+          "place": "Schengen",
+          "direction": "Tunnel Markusbierg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13074.jpg"
+        }
+      ]
+    }
+  ]
+}

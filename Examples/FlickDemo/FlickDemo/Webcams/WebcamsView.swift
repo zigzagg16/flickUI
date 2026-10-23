@@ -39,17 +39,20 @@ enum WebcamFeed: Identifiable, Hashable {
     }
 }
 
-/// Live motorway webcams from cita.lu. Two nested menus, one per side: the right
-/// edge switches between the live stream and the cameras, the left edge switches motorways.
+/// Live motorway webcams. Everything shown comes from the ``WebcamCatalog``. Two
+/// nested menus, one per side: the right edge switches between the live stream, the
+/// traffic map and the cameras, the left edge switches motorways.
 struct WebcamsView: View {
     /// A camera to show, from a widget.
     var link: WebcamLink?
 
-    @State private var motorway = Motorway.a13.id
+    @State private var catalog = CatalogStore.current()
+    @AppStorage("webcamsMotorway") private var motorwayID = ""
     /// A camera to show once its motorway is selected.
-    @State private var requestedFeed: [Motorway: String] = [:]
+    @State private var requestedFeed: [String: String] = [:]
     @State private var feedID = WebcamFeed.liveID
-    @State private var pages: [Motorway: WebcamPage] = [:]
+    /// Cameras read from the source's pages, for motorways the catalog lists without cameras.
+    @State private var pages: [String: WebcamPage] = [:]
     @State private var loadError: String?
     /// Contained by default, so the camera stays visible around the menu.
     @State private var background = BackgroundChoice.panel
@@ -59,67 +62,109 @@ struct WebcamsView: View {
         self.link = link
     }
 
-    private var current: Motorway {
-        Motorway(rawValue: motorway) ?? .a13
+    private var motorways: [Motorway] {
+        catalog.orderedMotorways
+    }
+
+    /// The selected motorway, or the first one.
+    private var current: Motorway? {
+        catalog.motorway(withID: motorwayID) ?? motorways.first
+    }
+
+    /// The catalog's cameras, or those read from the motorway's page when it lists none.
+    private func cameras(of motorway: Motorway?) -> [Webcam] {
+        guard let motorway else { return [] }
+        let listed = motorway.enabledCameras.map(catalog.webcam(for:))
+        return listed.isEmpty ? pages[motorway.id]?.cameras ?? [] : listed
     }
 
     private var cameras: [Webcam] {
-        pages[current]?.cameras ?? []
+        cameras(of: current)
     }
 
-    /// The live stream and map are always there, so the menu works before the cameras load.
     private var feeds: [WebcamFeed] {
-        [.live, .map] + cameras.map(WebcamFeed.camera)
+        var feeds: [WebcamFeed] = []
+        if current?.liveStream != nil { feeds.append(.live) }
+        if current?.trafficMap != nil { feeds.append(.map) }
+        return feeds + cameras.map(WebcamFeed.camera)
     }
 
-    private var feed: WebcamFeed {
-        feeds.first { $0.id == feedID } ?? .live
+    private var feed: WebcamFeed? {
+        feeds.first { $0.id == feedID } ?? feeds.first
     }
 
     var body: some View {
-        WebcamScreen(
-            motorway: current,
-            title: pages[current]?.title ?? current.title,
-            feed: feed,
-            position: cameraPosition,
-            report: currentReport,
-            error: loadError,
-            background: $background
-        ) {
-            Task { await load(current) }
+        Group {
+            if let current, let feed {
+                WebcamScreen(
+                    motorway: current,
+                    title: pages[current.id]?.title ?? current.title,
+                    source: catalog.source.name,
+                    feed: feed,
+                    position: cameraPosition,
+                    report: currentReport,
+                    error: loadError,
+                    background: $background
+                ) {
+                    Task { await load(current) }
+                }
+            } else {
+                ContentUnavailableView("No Webcams", systemImage: "web.camera", description: Text(loadError ?? "The catalog lists no cameras."))
+                    .overlay(alignment: .topLeading) {
+                        AppSwitcher()
+                            .labelStyle(.iconOnly)
+                            .font(.title2)
+                            .padding()
+                    }
+            }
         }
         .environment(monitor)
         .flickMenu(feeds, selection: $feedID, edges: .trailing, title: \.title, systemImage: { symbol(for: $0) })
         .flickMenuHome(.trailing, position: 0.4)
-        .flickMenu(Motorway.allCases, selection: $motorway, edges: .leading, title: \.title, systemImage: \.symbol)
+        .flickMenu(motorways, selection: currentMotorwayID, edges: .leading, title: \.shortName, systemImage: \.menuSymbol)
         .flickMenuHome(.leading, position: 0.4)
         .flickMenuIndicatorStyle(.morphing(.liquid, tint: .yellow), edges: .leading)
         .flickMenuBackground(DemoBackgroundStyle(choice: background))
-        .onChange(of: motorway) {
-            if let requested = requestedFeed.removeValue(forKey: current) {
+        .onChange(of: motorwayID) {
+            if let requested = requestedFeed.removeValue(forKey: motorwayID) {
                 feedID = requested
             } else if feedID != WebcamFeed.liveID {
                 // Stay on the live stream; otherwise start at the new motorway's first camera.
-                feedID = pages[current]?.cameras.first?.id ?? WebcamFeed.liveID
+                feedID = cameras.first?.id ?? WebcamFeed.liveID
             }
         }
         .onChange(of: link, initial: true) { _, link in
             guard let link else { return }
-            if link.motorway == current {
+            if link.motorwayID == current?.id {
                 feedID = link.cameraID
             } else {
-                requestedFeed[link.motorway] = link.cameraID
-                motorway = link.motorway.id
+                requestedFeed[link.motorwayID] = link.cameraID
+                motorwayID = link.motorwayID
             }
         }
-        .task(id: motorway) {
-            await load(current)
+        .onChange(of: catalog.settings.vehicleModelURL, initial: true) { _, url in
+            monitor.vehicleModelURL = url
+        }
+        .task {
+            catalog = await CatalogStore.refreshed()
+        }
+        .task(id: current) {
+            if let current { await load(current) }
         }
         .task(id: cameras) {
             await monitor.watch(cameras)
         }
         .task {
             await monitor.restore()
+        }
+    }
+
+    /// The selection of the motorway menu, which always has a motorway selected.
+    private var currentMotorwayID: Binding<String> {
+        Binding {
+            current?.id ?? motorwayID
+        } set: { id in
+            motorwayID = id
         }
     }
 
@@ -142,17 +187,19 @@ struct WebcamsView: View {
         return (index: index + 1, count: cameras.count)
     }
 
+    /// Reads the motorway's page when the catalog lists no cameras for it.
     private func load(_ motorway: Motorway) async {
         loadError = nil
+        guard motorway.enabledCameras.isEmpty, let website = motorway.website else { return }
         do {
-            let page = try await CitaWebcams.page(for: motorway)
-            pages[motorway] = page
-            if motorway == current, !feeds.contains(where: { $0.id == feedID }) {
-                feedID = page.cameras.first?.id ?? WebcamFeed.liveID
+            let page = try await CitaWebcams.page(at: website)
+            pages[motorway.id] = page
+            if motorway.id == current?.id, !feeds.contains(where: { $0.id == feedID }) {
+                feedID = feeds.first?.id ?? WebcamFeed.liveID
             }
         } catch {
-            // A cached page stays usable; only a motorway without cameras shows the error.
-            if !Task.isCancelled, pages[motorway] == nil {
+            // A page read before stays usable; only a motorway without cameras shows the error.
+            if !Task.isCancelled, pages[motorway.id] == nil {
                 loadError = error.localizedDescription
             }
         }
@@ -162,6 +209,8 @@ struct WebcamsView: View {
 struct WebcamScreen: View {
     let motorway: Motorway
     let title: String
+    /// Who provides the pictures.
+    let source: String
     let feed: WebcamFeed
     let position: (index: Int, count: Int)?
     let report: RoadReport?
@@ -180,11 +229,19 @@ struct WebcamScreen: View {
             case .live:
                 LiveStreamView(motorway: motorway)
             case .map:
-                // Not a camera: shown as is, without analysis.
-                WebcamImage(
-                    camera: Webcam(id: "map-\(motorway.rawValue)", place: "Traffic map", direction: "", imageURL: motorway.trafficMapURL),
-                    analyzes: false
-                )
+                if let map = motorway.trafficMap {
+                    // Not a camera: shown as is, without analysis.
+                    WebcamImage(
+                        camera: Webcam(
+                            id: "map-\(motorway.id)",
+                            place: "Traffic map",
+                            direction: "",
+                            imageURL: map.imageURL,
+                            refreshInterval: map.refreshInterval
+                        ),
+                        analyzes: false
+                    )
+                }
             case let .camera(camera):
                 WebcamImage(camera: camera)
             }
@@ -219,7 +276,7 @@ struct WebcamScreen: View {
                 case .map:
                     Text("Traffic map")
                         .font(.title2.bold())
-                    Text("cita.lu")
+                    Text(source)
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.8))
                 case let .camera(camera):
@@ -304,7 +361,8 @@ struct WebcamImage: View {
     @Environment(RoadMonitor.self) private var monitor
     @AppStorage(showsVehiclesKey) private var showsVehicles = true
 
-    private static let refreshInterval = Duration.seconds(30)
+    /// For cameras whose catalog entry gives no refresh interval.
+    private static let defaultRefreshInterval: TimeInterval = 30
 
     private var isCurrent: Bool {
         imageCameraID == camera.id
@@ -373,7 +431,7 @@ struct WebcamImage: View {
                     if analyzes { monitor.recordFailure(for: camera) }
                 }
             }
-            try? await Task.sleep(for: Self.refreshInterval)
+            try? await Task.sleep(for: .seconds(camera.refreshInterval ?? Self.defaultRefreshInterval))
         }
     }
 }

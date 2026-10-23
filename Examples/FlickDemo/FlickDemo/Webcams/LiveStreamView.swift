@@ -75,8 +75,12 @@ struct LiveStreamView: View {
 
     private func play() async {
         failed = false
-        let url = await CitaWebcams.liveStream(for: motorway)
-        guard !Task.isCancelled else { return }
+        guard let stream = motorway.liveStream else {
+            failed = true
+            return
+        }
+        isMuted = stream.startsMuted ?? true
+        let url = stream.url
         let item = AVPlayerItem(url: url)
         let output = AVPlayerItemVideoOutput(pixelBufferAttributes: [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,

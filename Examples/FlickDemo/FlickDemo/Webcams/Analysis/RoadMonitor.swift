@@ -14,6 +14,8 @@ final class RoadMonitor {
 
     private(set) var reports: [String: RoadReport] = [:]
     private(set) var detector = DetectorState.off
+    /// Where to download the vehicle detection model, from the catalog.
+    var vehicleModelURL: URL?
 
     var detectsVehicles: Bool {
         detector == .on
@@ -32,7 +34,7 @@ final class RoadMonitor {
         guard detector != .on, detector != .downloading else { return }
         detector = .downloading
         do {
-            try await VehicleDetector.install()
+            try await VehicleDetector.install(from: vehicleModelURL)
             detector = .on
         } catch {
             detector = .failed(error.localizedDescription)

@@ -1,48 +1,5 @@
 import Foundation
 
-/// A Luxembourg motorway with webcams on cita.lu.
-enum Motorway: String, CaseIterable, Identifiable {
-    case a1, a3, a4, a6, a7, a13
-
-    var id: String { rawValue }
-
-    var code: String { rawValue.uppercased() }
-
-    /// A short name for the menu. The page's own title replaces it once loaded.
-    var title: String {
-        switch self {
-        case .a1: "A1 Trèves"
-        case .a3: "A3 Dudelange"
-        case .a4: "A4 Esch"
-        case .a6: "A6 Arlon"
-        case .a7: "A7 Nord"
-        case .a13: "A13 Sarre"
-        }
-    }
-
-    var symbol: String {
-        "\(rawValue.dropFirst()).circle.fill"
-    }
-
-    var pageURL: URL {
-        CitaWebcams.baseURL.appending(path: "fr/webcam/\(rawValue).html")
-    }
-
-    var liveStreamPageURL: URL {
-        CitaWebcams.baseURL.appending(path: "fr/live-stream/\(rawValue).html")
-    }
-
-    /// cita.lu's traffic-state picture for the motorway, shown above its webcams.
-    var trafficMapURL: URL {
-        CitaWebcams.baseURL.appending(path: "webcam/service/\(rawValue)")
-    }
-
-    /// The HLS stream the live-stream page plays, following the pattern the pages use.
-    var defaultLiveStreamURL: URL {
-        URL(string: "https://live-edge.rtl.lu/cita/cita_\(rawValue)/playlist.m3u8")!
-    }
-}
-
 /// One camera on a motorway.
 struct Webcam: Identifiable, Hashable, Sendable {
     /// The camera number, as in `cccam_13034.jpg`.
@@ -52,6 +9,8 @@ struct Webcam: Identifiable, Hashable, Sendable {
     let direction: String
     /// The still image, without a cache-busting query.
     let imageURL: URL
+    /// How often the picture is reloaded, in seconds; `nil` for the app's default.
+    var refreshInterval: TimeInterval?
 
     /// "Sanem → Pétange".
     var title: String {
@@ -61,11 +20,6 @@ struct Webcam: Identifiable, Hashable, Sendable {
 
     var symbol: String {
         place.localizedCaseInsensitiveContains("tunnel") ? "mountain.2.fill" : "web.camera.fill"
-    }
-
-    /// The usual image URL of a camera, for when its page can't be read.
-    static func defaultImageURL(forCamera id: String) -> URL {
-        CitaWebcams.baseURL.appending(path: "info_trafic/cameras/images/cccam_\(id).jpg")
     }
 
     /// The image URL with a timestamp, the way cita.lu refreshes its images.
@@ -81,17 +35,13 @@ struct WebcamPage: Sendable {
     var cameras: [Webcam]
 }
 
-/// Reads the cameras from cita.lu.
+/// Loads camera pictures, and reads cameras from a cita.lu webcam page for
+/// motorways whose cameras the catalog doesn't list.
 ///
 /// cita.lu has no API for its webcams: each motorway page is server-rendered HTML
-/// listing `<figure id="cam-…">` items, and every camera is a JPEG at
-/// `/info_trafic/cameras/images/cccam_<id>.jpg` that the site reloads with a
-/// timestamp query. So the page is fetched once to learn the cameras, and the
-/// images are then fetched directly. Each motorway also has one HLS live stream,
-/// linked from its live-stream page.
+/// listing `<figure id="cam-…">` items, each with the JPEG the site reloads with a
+/// timestamp query. Which pages to read comes from the ``WebcamCatalog``.
 enum CitaWebcams {
-    static let baseURL = URL(string: "https://www.cita.lu")!
-
     enum LoadError: LocalizedError {
         case noCameras
 
@@ -100,27 +50,18 @@ enum CitaWebcams {
         }
     }
 
-    static func page(for motorway: Motorway) async throws -> WebcamPage {
-        var request = URLRequest(url: motorway.pageURL)
+    /// The cameras listed on a webcam page.
+    static func page(at url: URL) async throws -> WebcamPage {
+        var request = URLRequest(url: url)
         request.cachePolicy = .reloadIgnoringLocalCacheData
         let (data, response) = try await URLSession.shared.data(for: request)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             throw URLError(.badServerResponse)
         }
         let html = String(decoding: data, as: UTF8.self)
-        let page = parse(html, baseURL: motorway.pageURL)
+        let page = parse(html, baseURL: url)
         guard !page.cameras.isEmpty else { throw LoadError.noCameras }
         return page
-    }
-
-    /// The motorway's HLS live stream, as linked from its live-stream page.
-    /// Falls back to the usual URL pattern if the page can't be read.
-    static func liveStream(for motorway: Motorway) async -> URL {
-        guard let data = try? await URLSession.shared.data(from: motorway.liveStreamPageURL).0,
-              let match = String(decoding: data, as: UTF8.self).firstMatch(of: #/https://[^'"\s]+\.m3u8/#),
-              let url = URL(string: String(match.0))
-        else { return motorway.defaultLiveStreamURL }
-        return url
     }
 
     static func image(of camera: Webcam, at date: Date = .now) async throws -> Data {

@@ -124,7 +124,12 @@ panel so the camera stays visible; the brush button tries the other backgrounds.
 The grid menu also sets which app opens at launch, stored in UserDefaults under
 `launchApp` (`showcase`, `webcams`, or unset to reopen the last one). The
 **Webcams** scheme passes `-launchApp webcams`, so it runs like a separate app.
-The cita.lu code lives in `Examples/FlickDemo/CitaKit`, shared with a **Webcams
+What the Webcams app shows comes from a catalog, `WebcamCatalog`: the motorways,
+their cameras, live streams and traffic maps, and every link. It is decoded from
+`CitaKit/catalog.json`, bundled with the app, until a backend serves it at the
+`WebcamCatalogURL` Info.plist key; the last downloaded catalog is cached for the app
+and the widget. For a motorway listed without cameras, the app reads them from its
+webcam page. The cita.lu code lives in `Examples/FlickDemo/CitaKit`, shared with a **Webcams
 widget** (small, medium and large): pick a camera in the widget's settings, and it
 shows that camera's image, refreshed by WidgetKit about every 15 minutes. Tapping
 it opens the camera in the app. Widgets can't play video, so there's no live stream.
