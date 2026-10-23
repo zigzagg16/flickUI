@@ -5,20 +5,33 @@ import UIKit
 /// The UserDefaults key of whether detected vehicles are drawn over the picture.
 private let showsVehiclesKey = "showsVehicleDetections"
 
-/// What the side menu shows: the motorway's live stream, its traffic map, then its cameras.
+/// What the side menu shows: a motorway's live stream, its traffic map and its
+/// cameras, or the favourites, which can mix motorways.
 enum WebcamFeed: Identifiable, Hashable {
-    case live
-    case map
-    case camera(Webcam)
-
-    static let liveID = "live"
-    static let mapID = "map"
+    case live(motorwayID: String)
+    case map(motorwayID: String)
+    case camera(Webcam, motorwayID: String)
 
     var id: String {
         switch self {
-        case .live: Self.liveID
-        case .map: Self.mapID
-        case let .camera(camera): camera.id
+        case let .live(motorwayID): "live-\(motorwayID)"
+        case let .map(motorwayID): "map-\(motorwayID)"
+        case let .camera(camera, _): camera.id
+        }
+    }
+
+    var motorwayID: String {
+        switch self {
+        case let .live(motorwayID), let .map(motorwayID), let .camera(_, motorwayID): motorwayID
+        }
+    }
+
+    /// The favourite this feed would be; the traffic map can't be one.
+    var favourite: Favourite? {
+        switch self {
+        case let .live(motorwayID): Favourite(motorwayID: motorwayID, feed: .live)
+        case .map: nil
+        case let .camera(camera, motorwayID): Favourite(motorwayID: motorwayID, feed: .camera(camera.id))
         }
     }
 
@@ -26,7 +39,7 @@ enum WebcamFeed: Identifiable, Hashable {
         switch self {
         case .live: "Live stream"
         case .map: "Traffic map"
-        case let .camera(camera): camera.title
+        case let .camera(camera, _): camera.title
         }
     }
 
@@ -34,29 +47,62 @@ enum WebcamFeed: Identifiable, Hashable {
         switch self {
         case .live: "play.tv.fill"
         case .map: "map.fill"
-        case let .camera(camera): camera.symbol
+        case let .camera(camera, _): camera.symbol
+        }
+    }
+}
+
+/// The motorway menu: the favourites, when there are some, then the motorways.
+enum MotorwayMenuItem: Identifiable {
+    case favourites
+    case motorway(Motorway)
+
+    static let favouritesID = "favourites"
+
+    var id: String {
+        switch self {
+        case .favourites: Self.favouritesID
+        case let .motorway(motorway): motorway.id
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .favourites: "Favourites"
+        case let .motorway(motorway): motorway.shortName
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .favourites: "star.fill"
+        case let .motorway(motorway): motorway.menuSymbol
         }
     }
 }
 
 /// Live motorway webcams. Everything shown comes from the ``WebcamCatalog``. Two
-/// nested menus, one per side: the right edge switches between the live stream, the
-/// traffic map and the cameras, the left edge switches motorways.
+/// nested menus, one per side: the left edge picks a motorway, or the favourites; the
+/// right edge switches between the motorway's live stream, traffic map and cameras,
+/// or between the favourites.
 struct WebcamsView: View {
     /// A camera to show, from a widget.
     var link: WebcamLink?
 
     @State private var catalog = CatalogStore.current()
-    @AppStorage("webcamsMotorway") private var motorwayID = ""
-    /// A camera to show once its motorway is selected.
+    /// The motorway menu's selection: a motorway, or the favourites.
+    @AppStorage("webcamsMotorway") private var menuID = ""
+    /// A feed to show once its motorway is selected.
     @State private var requestedFeed: [String: String] = [:]
-    @State private var feedID = WebcamFeed.liveID
+    @State private var feedID = ""
     /// Cameras read from the source's pages, for motorways the catalog lists without cameras.
     @State private var pages: [String: WebcamPage] = [:]
     @State private var loadError: String?
     /// Contained by default, so the camera stays visible around the menu.
     @State private var background = BackgroundChoice.panel
     @State private var monitor = RoadMonitor()
+    @State private var favourites = Favourites()
+    @State private var showsFavouritesEditor = false
 
     init(link: WebcamLink? = nil) {
         self.link = link
@@ -66,9 +112,17 @@ struct WebcamsView: View {
         catalog.orderedMotorways
     }
 
-    /// The selected motorway, or the first one.
-    private var current: Motorway? {
-        catalog.motorway(withID: motorwayID) ?? motorways.first
+    private var menuItems: [MotorwayMenuItem] {
+        (favourites.items.isEmpty ? [] : [.favourites]) + motorways.map(MotorwayMenuItem.motorway)
+    }
+
+    private var showsFavourites: Bool {
+        menuID == MotorwayMenuItem.favouritesID && !favourites.items.isEmpty
+    }
+
+    /// The motorway picked in the menu, or the first one.
+    private var selectedMotorway: Motorway? {
+        catalog.motorway(withID: menuID) ?? motorways.first
     }
 
     /// The catalog's cameras, or those read from the motorway's page when it lists none.
@@ -78,19 +132,55 @@ struct WebcamsView: View {
         return listed.isEmpty ? pages[motorway.id]?.cameras ?? [] : listed
     }
 
-    private var cameras: [Webcam] {
-        cameras(of: current)
+    private func feeds(of motorway: Motorway) -> [WebcamFeed] {
+        var feeds: [WebcamFeed] = []
+        if motorway.liveStream != nil { feeds.append(.live(motorwayID: motorway.id)) }
+        if motorway.trafficMap != nil { feeds.append(.map(motorwayID: motorway.id)) }
+        return feeds + cameras(of: motorway).map { .camera($0, motorwayID: motorway.id) }
+    }
+
+    /// A favourite's feed, once its motorway's cameras are known.
+    private func feed(for favourite: Favourite) -> WebcamFeed? {
+        guard let motorway = catalog.motorway(withID: favourite.motorwayID) else { return nil }
+        switch favourite.feed {
+        case .live:
+            return motorway.liveStream == nil ? nil : .live(motorwayID: motorway.id)
+        case let .camera(cameraID):
+            return cameras(of: motorway).first { $0.id == cameraID }.map { .camera($0, motorwayID: motorway.id) }
+        }
     }
 
     private var feeds: [WebcamFeed] {
-        var feeds: [WebcamFeed] = []
-        if current?.liveStream != nil { feeds.append(.live) }
-        if current?.trafficMap != nil { feeds.append(.map) }
-        return feeds + cameras.map(WebcamFeed.camera)
+        if showsFavourites {
+            return favourites.items.compactMap(feed(for:))
+        }
+        return selectedMotorway.map(feeds(of:)) ?? []
     }
 
     private var feed: WebcamFeed? {
         feeds.first { $0.id == feedID } ?? feeds.first
+    }
+
+    /// The motorway of the feed on screen.
+    private var current: Motorway? {
+        feed.flatMap { catalog.motorway(withID: $0.motorwayID) } ?? selectedMotorway
+    }
+
+    /// The cameras the menu lists, which the road monitor watches.
+    private var cameras: [Webcam] {
+        feeds.compactMap { feed in
+            if case let .camera(camera, _) = feed { return camera }
+            return nil
+        }
+    }
+
+    /// The motorways whose page must be read: the selected one, or the favourites'.
+    private var motorwaysToLoad: [Motorway] {
+        if showsFavourites {
+            let ids = Set(favourites.items.map(\.motorwayID))
+            return motorways.filter { ids.contains($0.id) }
+        }
+        return selectedMotorway.map { [$0] } ?? []
     }
 
     var body: some View {
@@ -98,13 +188,14 @@ struct WebcamsView: View {
             if let current, let feed {
                 WebcamScreen(
                     motorway: current,
-                    title: pages[current.id]?.title ?? current.title,
+                    title: showsFavourites ? "★ \(current.title)" : pages[current.id]?.title ?? current.title,
                     source: catalog.source.name,
                     feed: feed,
-                    position: cameraPosition,
+                    position: position,
                     report: currentReport,
                     error: loadError,
-                    background: $background
+                    background: $background,
+                    manageFavourites: { showsFavouritesEditor = true }
                 ) {
                     Task { await load(current) }
                 }
@@ -119,27 +210,46 @@ struct WebcamsView: View {
             }
         }
         .environment(monitor)
-        .flickMenu(feeds, selection: $feedID, edges: .trailing, title: \.title, systemImage: { symbol(for: $0) })
+        .environment(favourites)
+        .flickMenu(feeds, selection: $feedID, edges: .trailing, title: { menuTitle(for: $0) }, systemImage: { symbol(for: $0) })
         .flickMenuHome(.trailing, position: 0.4)
-        .flickMenu(motorways, selection: currentMotorwayID, edges: .leading, title: \.shortName, systemImage: \.menuSymbol)
+        .flickMenu(menuItems, selection: menuSelection, edges: .leading, title: \.title, systemImage: \.symbol)
         .flickMenuHome(.leading, position: 0.4)
         .flickMenuIndicatorStyle(.morphing(.liquid, tint: .yellow), edges: .leading)
         .flickMenuBackground(DemoBackgroundStyle(choice: background))
-        .onChange(of: motorwayID) {
-            if let requested = requestedFeed.removeValue(forKey: motorwayID) {
+        .sheet(isPresented: $showsFavouritesEditor) {
+            FavouritesEditor(motorways: motorways, name: name(of:), cameras: loadCameras(of:))
+                .environment(favourites)
+        }
+        .onChange(of: menuID) {
+            if showsFavourites {
+                feedID = feeds.first?.id ?? ""
+            } else if let requested = requestedFeed.removeValue(forKey: menuID) {
                 feedID = requested
-            } else if feedID != WebcamFeed.liveID {
-                // Stay on the live stream; otherwise start at the new motorway's first camera.
-                feedID = cameras.first?.id ?? WebcamFeed.liveID
+            } else if let motorway = selectedMotorway {
+                // Stay on the live stream; otherwise start at the motorway's first camera.
+                let motorwayFeeds = feeds(of: motorway)
+                if feedID.hasPrefix("live-"), motorway.liveStream != nil {
+                    feedID = WebcamFeed.live(motorwayID: motorway.id).id
+                } else {
+                    let firstCamera = motorwayFeeds.first { feed in
+                        if case .camera = feed { return true }
+                        return false
+                    }
+                    feedID = (firstCamera ?? motorwayFeeds.first)?.id ?? ""
+                }
             }
         }
         .onChange(of: link, initial: true) { _, link in
             guard let link else { return }
-            if link.motorwayID == current?.id {
-                feedID = link.cameraID
+            let id = link.cameraID == WebcamLink.live ? WebcamFeed.live(motorwayID: link.motorwayID).id : link.cameraID
+            if showsFavourites, feeds.contains(where: { $0.id == id }) {
+                feedID = id
+            } else if menuID == link.motorwayID {
+                feedID = id
             } else {
-                requestedFeed[link.motorwayID] = link.cameraID
-                motorwayID = link.motorwayID
+                requestedFeed[link.motorwayID] = id
+                menuID = link.motorwayID
             }
         }
         .onChange(of: catalog.settings.vehicleModelURL, initial: true) { _, url in
@@ -148,8 +258,10 @@ struct WebcamsView: View {
         .task {
             catalog = await CatalogStore.refreshed()
         }
-        .task(id: current) {
-            if let current { await load(current) }
+        .task(id: motorwaysToLoad.map(\.id)) {
+            for motorway in motorwaysToLoad {
+                await load(motorway)
+            }
         }
         .task(id: cameras) {
             await monitor.watch(cameras)
@@ -159,31 +271,63 @@ struct WebcamsView: View {
         }
     }
 
-    /// The selection of the motorway menu, which always has a motorway selected.
-    private var currentMotorwayID: Binding<String> {
+    /// The selection of the motorway menu, which always has an item selected.
+    private var menuSelection: Binding<String> {
         Binding {
-            current?.id ?? motorwayID
+            showsFavourites ? MotorwayMenuItem.favouritesID : selectedMotorway?.id ?? menuID
         } set: { id in
-            motorwayID = id
+            menuID = id
         }
     }
 
+    /// Among favourites, a live stream is named after its motorway.
+    private func menuTitle(for feed: WebcamFeed) -> String {
+        guard showsFavourites, case let .live(motorwayID) = feed else { return feed.title }
+        return "\(catalog.motorway(withID: motorwayID)?.code ?? motorwayID) live"
+    }
+
+    /// A favourite's name, such as "A13 · Sanem → Pétange".
+    private func name(of favourite: Favourite) -> String {
+        let motorway = catalog.motorway(withID: favourite.motorwayID)
+        let code = motorway?.code ?? favourite.motorwayID
+        switch favourite.feed {
+        case .live:
+            return "\(code) · Live stream"
+        case let .camera(cameraID):
+            let camera = cameras(of: motorway).first { $0.id == cameraID }
+            return "\(code) · \(camera?.title ?? "Camera \(cameraID)")"
+        }
+    }
+
+    /// A motorway's cameras, reading its page first if needed.
+    private func loadCameras(of motorway: Motorway) async -> [Webcam] {
+        if cameras(of: motorway).isEmpty {
+            await load(motorway)
+        }
+        return cameras(of: motorway)
+    }
+
     private var currentReport: RoadReport? {
-        guard case let .camera(camera) = feed else { return nil }
+        guard case let .camera(camera, _) = feed else { return nil }
         return monitor.report(for: camera)
     }
 
     /// A camera's symbol in the menu shows its situation when something stands out.
     private func symbol(for feed: WebcamFeed) -> String {
-        if case let .camera(camera) = feed, let symbol = monitor.report(for: camera)?.symbol {
+        if case let .camera(camera, _) = feed, let symbol = monitor.report(for: camera)?.symbol {
             return symbol
         }
         return feed.symbol
     }
 
-    /// The camera's place among the cameras, 1-based, and their number.
-    private var cameraPosition: (index: Int, count: Int)? {
-        guard case let .camera(camera) = feed, let index = cameras.firstIndex(of: camera) else { return nil }
+    /// The feed's place in the menu, 1-based, and the number of cameras, or of favourites.
+    private var position: (index: Int, count: Int)? {
+        guard let feed else { return nil }
+        if showsFavourites {
+            guard let index = feeds.firstIndex(of: feed) else { return nil }
+            return (index: index + 1, count: feeds.count)
+        }
+        guard case let .camera(camera, _) = feed, let index = cameras.firstIndex(of: camera) else { return nil }
         return (index: index + 1, count: cameras.count)
     }
 
@@ -194,8 +338,8 @@ struct WebcamsView: View {
         do {
             let page = try await CitaWebcams.page(at: website)
             pages[motorway.id] = page
-            if motorway.id == current?.id, !feeds.contains(where: { $0.id == feedID }) {
-                feedID = feeds.first?.id ?? WebcamFeed.liveID
+            if !feeds.contains(where: { $0.id == feedID }) {
+                feedID = feeds.first?.id ?? ""
             }
         } catch {
             // A page read before stays usable; only a motorway without cameras shows the error.
@@ -216,8 +360,10 @@ struct WebcamScreen: View {
     let report: RoadReport?
     let error: String?
     @Binding var background: BackgroundChoice
+    let manageFavourites: () -> Void
     let retry: () -> Void
     @Environment(RoadMonitor.self) private var monitor
+    @Environment(Favourites.self) private var favourites
     @AppStorage(showsVehiclesKey) private var showsVehicles = true
     @AppStorage("analyzesLiveMotion") private var analyzesLiveMotion = true
 
@@ -242,7 +388,7 @@ struct WebcamScreen: View {
                         analyzes: false
                     )
                 }
-            case let .camera(camera):
+            case let .camera(camera, _):
                 WebcamImage(camera: camera)
             }
         }
@@ -301,7 +447,7 @@ struct WebcamScreen: View {
                     Text(source)
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.8))
-                case let .camera(camera):
+                case let .camera(camera, _):
                     Text(camera.place)
                         .font(.title2.bold())
                     Text(camera.direction)
@@ -333,7 +479,20 @@ struct WebcamScreen: View {
                 }
             }
             Spacer()
+            if let favourite = feed.favourite {
+                Button {
+                    favourites.toggle(favourite)
+                } label: {
+                    Image(systemName: favourites.contains(favourite) ? "star.fill" : "star")
+                        .foregroundStyle(.yellow)
+                        .contentTransition(.symbolEffect(.replace))
+                        .padding(6)
+                        .background(.ultraThinMaterial, in: Circle())
+                }
+                .accessibilityLabel(favourites.contains(favourite) ? "Remove from Favourites" : "Add to Favourites")
+            }
             Menu {
+                Button("Favourites…", systemImage: "star", action: manageFavourites)
                 Section("Analysis") {
                     Toggle("Detect Vehicles", systemImage: "car.fill", isOn: detectsVehicles)
                     Toggle("Show Detections", systemImage: "rectangle.dashed", isOn: $showsVehicles)
@@ -358,7 +517,7 @@ struct WebcamScreen: View {
                     .padding(6)
                     .background(.ultraThinMaterial, in: Circle())
             }
-            if feed == .live {
+            if case .live = feed {
                 Text("LIVE")
                     .font(.footnote.bold())
                     .padding(.horizontal, 10)
