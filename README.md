@@ -117,9 +117,11 @@ the left/right and top/bottom edges.
 
 The grid button switches to a second app, **Webcams**, which shows the live motorway
 cameras from [cita.lu](https://www.cita.lu/fr/webcam/a13.html) with two nested
-menus: the side edges switch cameras and the top/bottom edges switch motorways.
-cita.lu has no webcam API, so the app reads the camera list from each motorway's
-page and reloads each camera's JPEG every 30 seconds.
+menus: the side edges switch between the motorway's live stream and its cameras,
+and the top/bottom edges switch motorways. cita.lu has no webcam API, so the app
+reads the camera list from each motorway's page and reloads each camera's JPEG every
+30 seconds. The live stream is the HLS playlist linked from the motorway's
+live-stream page, played muted until you unmute it.
 
 To run it on a device:
 

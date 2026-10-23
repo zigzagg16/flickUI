@@ -27,6 +27,15 @@ enum Motorway: String, CaseIterable, Identifiable {
     var pageURL: URL {
         CitaWebcams.baseURL.appending(path: "fr/webcam/\(rawValue).html")
     }
+
+    var liveStreamPageURL: URL {
+        CitaWebcams.baseURL.appending(path: "fr/live-stream/\(rawValue).html")
+    }
+
+    /// The HLS stream the live-stream page plays, following the pattern the pages use.
+    var defaultLiveStreamURL: URL {
+        URL(string: "https://live-edge.rtl.lu/cita/cita_\(rawValue)/playlist.m3u8")!
+    }
 }
 
 /// One camera on a motorway.
@@ -68,7 +77,8 @@ struct WebcamPage: Sendable {
 /// listing `<figure id="cam-…">` items, and every camera is a JPEG at
 /// `/info_trafic/cameras/images/cccam_<id>.jpg` that the site reloads with a
 /// timestamp query. So the page is fetched once to learn the cameras, and the
-/// images are then fetched directly.
+/// images are then fetched directly. Each motorway also has one HLS live stream,
+/// linked from its live-stream page.
 enum CitaWebcams {
     static let baseURL = URL(string: "https://www.cita.lu")!
 
@@ -91,6 +101,16 @@ enum CitaWebcams {
         let page = parse(html, baseURL: motorway.pageURL)
         guard !page.cameras.isEmpty else { throw LoadError.noCameras }
         return page
+    }
+
+    /// The motorway's HLS live stream, as linked from its live-stream page.
+    /// Falls back to the usual URL pattern if the page can't be read.
+    static func liveStream(for motorway: Motorway) async -> URL {
+        guard let data = try? await URLSession.shared.data(from: motorway.liveStreamPageURL).0,
+              let match = String(decoding: data, as: UTF8.self).firstMatch(of: #/https://[^'"\s]+\.m3u8/#),
+              let url = URL(string: String(match.0))
+        else { return motorway.defaultLiveStreamURL }
+        return url
     }
 
     static func image(of camera: Webcam, at date: Date = .now) async throws -> Data {

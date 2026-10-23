@@ -2,11 +2,40 @@ import flickUI
 import SwiftUI
 import UIKit
 
+/// What the side menu shows: the motorway's live stream, then its cameras.
+enum WebcamFeed: Identifiable, Hashable {
+    case live
+    case camera(Webcam)
+
+    static let liveID = "live"
+
+    var id: String {
+        switch self {
+        case .live: Self.liveID
+        case let .camera(camera): camera.id
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .live: "Live stream"
+        case let .camera(camera): camera.title
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .live: "play.tv.fill"
+        case let .camera(camera): camera.symbol
+        }
+    }
+}
+
 /// Live motorway webcams from cita.lu. Two nested menus: the side edges switch
-/// cameras, the top and bottom edges switch motorways.
+/// between the live stream and the cameras, the top and bottom edges switch motorways.
 struct WebcamsView: View {
     @State private var motorway = Motorway.a13.id
-    @State private var cameraID = ""
+    @State private var feedID = WebcamFeed.liveID
     @State private var pages: [Motorway: WebcamPage] = [:]
     @State private var loadError: String?
 
@@ -18,20 +47,26 @@ struct WebcamsView: View {
         pages[current]?.cameras ?? []
     }
 
-    private var camera: Webcam? {
-        cameras.first { $0.id == cameraID } ?? cameras.first
+    /// The live stream is always there, so the menu works before the cameras load.
+    private var feeds: [WebcamFeed] {
+        [.live] + cameras.map(WebcamFeed.camera)
+    }
+
+    private var feed: WebcamFeed {
+        feeds.first { $0.id == feedID } ?? .live
     }
 
     var body: some View {
         WebcamScreen(
+            motorway: current,
             title: pages[current]?.title ?? current.title,
-            camera: camera,
-            position: camera.flatMap { camera in cameras.firstIndex(of: camera) }.map { (index: $0 + 1, count: cameras.count) },
+            feed: feed,
+            position: cameraPosition,
             error: loadError
         ) {
             Task { await load(current) }
         }
-        .flickMenu(cameras, selection: $cameraID, edges: .horizontal, title: \.title, systemImage: \.symbol)
+        .flickMenu(feeds, selection: $feedID, edges: .horizontal, title: \.title, systemImage: \.symbol)
         .flickMenuHome(.trailing, position: 0.4)
         .flickMenu(Motorway.allCases, selection: $motorway, edges: .vertical, title: \.title, systemImage: \.symbol)
         .flickMenuHome(.bottom)
@@ -39,11 +74,20 @@ struct WebcamsView: View {
         .flickMenuRowStyle(.magnifying(.dock), edges: .vertical)
         .flickMenuBackground(.gradient, edges: .vertical)
         .onChange(of: motorway) {
-            cameraID = pages[current]?.cameras.first?.id ?? ""
+            // Stay on the live stream; otherwise start at the new motorway's first camera.
+            if feedID != WebcamFeed.liveID {
+                feedID = pages[current]?.cameras.first?.id ?? WebcamFeed.liveID
+            }
         }
         .task(id: motorway) {
             await load(current)
         }
+    }
+
+    /// The camera's place among the cameras, 1-based, and their number.
+    private var cameraPosition: (index: Int, count: Int)? {
+        guard case let .camera(camera) = feed, let index = cameras.firstIndex(of: camera) else { return nil }
+        return (index: index + 1, count: cameras.count)
     }
 
     private func load(_ motorway: Motorway) async {
@@ -51,11 +95,11 @@ struct WebcamsView: View {
         do {
             let page = try await CitaWebcams.page(for: motorway)
             pages[motorway] = page
-            if motorway == current, !page.cameras.contains(where: { $0.id == cameraID }) {
-                cameraID = page.cameras.first?.id ?? ""
+            if motorway == current, !feeds.contains(where: { $0.id == feedID }) {
+                feedID = page.cameras.first?.id ?? WebcamFeed.liveID
             }
         } catch {
-            // A cached page stays usable; only an empty screen shows the error.
+            // A cached page stays usable; only a motorway without cameras shows the error.
             if !Task.isCancelled, pages[motorway] == nil {
                 loadError = error.localizedDescription
             }
@@ -64,9 +108,9 @@ struct WebcamsView: View {
 }
 
 struct WebcamScreen: View {
+    let motorway: Motorway
     let title: String
-    let camera: Webcam?
-    /// The camera's place in the list, 1-based, and the number of cameras.
+    let feed: WebcamFeed
     let position: (index: Int, count: Int)?
     let error: String?
     let retry: () -> Void
@@ -75,18 +119,11 @@ struct WebcamScreen: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            if let camera {
+            switch feed {
+            case .live:
+                LiveStreamView(motorway: motorway)
+            case let .camera(camera):
                 WebcamImage(camera: camera)
-            } else if let error {
-                ContentUnavailableView {
-                    Label("Webcams unavailable", systemImage: "wifi.exclamationmark")
-                } description: {
-                    Text(error)
-                } actions: {
-                    Button("Try Again", action: retry)
-                }
-            } else {
-                ProgressView()
             }
         }
         .overlay(alignment: .top) {
@@ -104,16 +141,31 @@ struct WebcamScreen: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.headline)
-                if let camera {
+                switch feed {
+                case .live:
+                    Text("Live stream")
+                        .font(.title2.bold())
+                case let .camera(camera):
                     Text(camera.place)
                         .font(.title2.bold())
                     Text(camera.direction)
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.8))
                 }
+                if let error {
+                    Button("Cameras unavailable. Retry", systemImage: "arrow.clockwise", action: retry)
+                        .font(.footnote)
+                        .accessibilityHint(error)
+                }
             }
             Spacer()
-            if let position {
+            if feed == .live {
+                Text("LIVE")
+                    .font(.footnote.bold())
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(.red, in: Capsule())
+            } else if let position {
                 Text("\(position.index)/\(position.count)")
                     .font(.footnote.monospacedDigit())
                     .padding(.horizontal, 10)
@@ -126,7 +178,7 @@ struct WebcamScreen: View {
             LinearGradient(colors: [.black.opacity(0.7), .clear], startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
         }
-        .animation(.smooth, value: camera)
+        .animation(.smooth, value: feed)
     }
 }
 
