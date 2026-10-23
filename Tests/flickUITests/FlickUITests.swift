@@ -39,6 +39,20 @@ struct FlickMenuEventTests {
         #expect(received == ["outer chose(2)", "inner chose(2)"])
     }
 
+    @Test func nestedMenusKeepStylesButNotHandlersOrInputs() {
+        var settings = FlickMenuSettings()
+        settings.eventHandlers = [FlickMenuEventHandler()]
+        settings.keyboardShortcut = KeyboardShortcut("m")
+        settings.opensOnPencilSqueeze = true
+        settings.boomerang.set(.origin, for: .all)
+
+        let nested = settings.forNestedMenus
+        #expect(nested.eventHandlers.isEmpty)
+        #expect(nested.keyboardShortcut == nil)
+        #expect(!nested.opensOnPencilSqueeze)
+        #expect(nested.boomerang == settings.boomerang)
+    }
+
     @Test func actionsReachTheirMenu() {
         var commands: [String] = []
         let controller = FlickMenuController()

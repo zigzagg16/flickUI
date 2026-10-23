@@ -73,8 +73,10 @@ public struct FlickColorBackgroundStyle: FlickMenuBackgroundStyle {
     public var color: Color
     public let contentColorScheme: ColorScheme?
 
-    /// - Parameter contentColorScheme: The rows' colour scheme. By default it is
-    ///   worked out from the colour: dark text on light colours, light text on dark ones.
+    /// - Parameters:
+    ///   - color: The background's colour.
+    ///   - contentColorScheme: The rows' colour scheme. By default it is worked out
+    ///     from the colour: dark text on light colours, light text on dark ones.
     public init(_ color: Color, contentColorScheme: ColorScheme? = nil) {
         self.color = color
         self.contentColorScheme = contentColorScheme ?? color.flickContentColorScheme
@@ -90,8 +92,10 @@ public struct FlickGradientBackgroundStyle: FlickMenuBackgroundStyle {
     public var color: Color
     public let contentColorScheme: ColorScheme?
 
-    /// - Parameter contentColorScheme: The rows' colour scheme. By default it is
-    ///   worked out from the colour, which is strongest behind the rows.
+    /// - Parameters:
+    ///   - color: The colour behind the rows, fading to clear away from them.
+    ///   - contentColorScheme: The rows' colour scheme. By default it is worked out
+    ///     from the colour, which is strongest behind the rows.
     public init(_ color: Color = .black.opacity(0.55), contentColorScheme: ColorScheme? = nil) {
         self.color = color
         self.contentColorScheme = contentColorScheme ?? color.flickContentColorScheme

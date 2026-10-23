@@ -62,6 +62,7 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
     func body(content: Content) -> some View {
         controller.perform = { command in perform(command) }
         return content
+            .environment(\.flickMenuSettings, settings.forNestedMenus)
             .environment(\.flickMenu, FlickMenuAction(controller: controller))
             .gesture(edgeGesture(.left))
             .gesture(edgeGesture(.right))
@@ -152,26 +153,22 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
     }
 
     private func indicatorStyle(for edge: FlickScreenEdge) -> AnyFlickIndicatorStyle {
-        settings.indicatorStyle.resolved(isRightToLeft: isRightToLeft)[edge]
+        settings.indicatorStyle.value(for: edge, isRightToLeft: isRightToLeft)
             ?? AnyFlickIndicatorStyle(FlickAutomaticIndicatorStyle())
     }
 
-    private func rowStyle(for edge: FlickScreenEdge) -> AnyFlickMenuRowStyle {
-        settings.rowStyle.resolved(isRightToLeft: isRightToLeft)[edge]
-            ?? AnyFlickMenuRowStyle(FlickMagnifyingRowStyle())
-    }
-
     private func backgroundStyle(for edge: FlickScreenEdge) -> AnyFlickMenuBackgroundStyle {
-        settings.backgroundStyle.resolved(isRightToLeft: isRightToLeft)[edge]
+        settings.backgroundStyle.value(for: edge, isRightToLeft: isRightToLeft)
             ?? AnyFlickMenuBackgroundStyle(FlickMaterialBackgroundStyle())
     }
 
-    private func highlightEmphasis(for edge: FlickScreenEdge) -> FlickMenuItemEmphasis {
-        settings.highlight.resolved(isRightToLeft: isRightToLeft)[edge]
-    }
-
-    private func selectionEmphasis(for edge: FlickScreenEdge) -> FlickMenuItemEmphasis {
-        settings.selection.resolved(isRightToLeft: isRightToLeft)[edge]
+    private func rowAppearance(for edge: FlickScreenEdge) -> RowAppearance {
+        RowAppearance(
+            style: settings.rowStyle.value(for: edge, isRightToLeft: isRightToLeft)
+                ?? AnyFlickMenuRowStyle(FlickMagnifyingRowStyle()),
+            highlight: settings.highlight.value(for: edge, isRightToLeft: isRightToLeft),
+            selection: settings.selection.value(for: edge, isRightToLeft: isRightToLeft)
+        )
     }
 
     // MARK: Events
@@ -255,7 +252,10 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
         case .decrement: next = max(current - 1, 0)
         @unknown default: return
         }
+        guard next != current else { return }
         selection = element(at: next).id
+        // Choosing through VoiceOver is still choosing: handlers hear about it.
+        settings.send(.chose(next))
     }
 
 }
@@ -337,10 +337,12 @@ extension FlickMenuModifier {
         let itemLength = geometry.itemLength[edge]
         let cross = geometry.crossLength(for: edge)
         let menuLength = geometry.menuLength(for: edge)
+        // Resolved once per update rather than once per row: this runs on every move.
+        let appearance = rowAppearance(for: edge)
         // Rows are identified by their item, so their state and symbol effects follow
         // the item if the data changes.
         let rows = ForEach(Array(data.enumerated()), id: \.element.id) { index, item in
-            rowView(for: item, at: index, session: session)
+            rowView(for: item, at: index, session: session, appearance: appearance)
                 .frame(width: isVertical ? cross : itemLength, height: isVertical ? itemLength : cross)
         }
 
@@ -364,7 +366,7 @@ extension FlickMenuModifier {
         .transition(.opacity.combined(with: .scale(scale: 0.96)))
     }
 
-    private func rowView(for item: Data.Element, at index: Int, session: FlickSession) -> some View {
+    private func rowView(for item: Data.Element, at index: Int, session: FlickSession, appearance: RowAppearance) -> some View {
         let edge = session.edge
         let isHighlighted = index == session.highlightedIndex
         let isSelected = index == machine.selectedIndex
@@ -373,8 +375,8 @@ extension FlickMenuModifier {
             systemImage: systemImage(item),
             isHighlighted: isHighlighted,
             isSelected: isSelected,
-            highlight: highlightEmphasis(for: edge),
-            selection: selectionEmphasis(for: edge)
+            highlight: appearance.highlight,
+            selection: appearance.selection
         )
         let configuration = FlickMenuRowStyleConfiguration(
             label: FlickMenuRowStyleConfiguration.Label(item: label, edge: edge, layoutDirection: layoutDirection),
@@ -386,7 +388,7 @@ extension FlickMenuModifier {
             distance: session.progress - (CGFloat(index) + 0.5),
             edge: edge
         )
-        return rowStyle(for: edge)
+        return appearance.style
             .makeBody(configuration: configuration)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: edge.indicatorSideAlignment)
             // Keep labels clear of the far side's safe area.
@@ -471,6 +473,13 @@ extension FlickMenuModifier {
             size: frame
         )
     }
+}
+
+/// The styling of a menu's rows on one edge.
+private struct RowAppearance {
+    let style: AnyFlickMenuRowStyle
+    let highlight: FlickMenuItemEmphasis
+    let selection: FlickMenuItemEmphasis
 }
 
 private struct IndicatorPlacement: Equatable {

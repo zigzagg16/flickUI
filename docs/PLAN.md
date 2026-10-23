@@ -216,18 +216,26 @@ one file so a renamed symbol doesn't affect the rest.
 ## 7. Internal architecture
 
 ```
-Sources/flickUI/
-  Public/        FlickMenuModifier, FlickEdge, FlickBoomerang, styles (Indicator/Row/Background),
-                 FlickMenuPhysics, FlickMenuFeedback, FlickMenuController (programmatic), Environment+Flick
-  Engine/        FlickGeometry       ← pure math for 2 axes (port of topYConstraint/matchingIndex/positionConstants)
-                 FlickPhysics        ← rubber-banding, velocity projection, magnification curve
-                 FlickStateMachine   ← pure reducer: idle → peeking → tracking → committing → restoring
-                 FlickFoldModel      ← hinge/region geometry → safe layout bands (pure, testable without a device)
-  Platform/      EdgePanGesture (UIGestureRecognizerRepresentable), HingeObserver (27.1), HoverPeek
-  Views/         FlickMenuOverlay, FlickMenuStack, FlickIndicator, Shapes/, Shaders/flick.metal
-Tests/flickUITests/   Geometry, physics, state machine, fold model, and the CariocaMenu regression vectors
-Examples/FlickDemo/   Showcase app: every style, edge, physics preset and Duo posture
+Sources/FlickCore/        Engine target. Imports only Foundation, so it builds and tests on Linux.
+  FlickEdge               logical/physical edges, axes, insets
+  FlickEdgeValues         per-edge values: FlickEdgeSettings (logical) → FlickEdgeValues (physical)
+  FlickGeometry           pure math for 2 axes (port of topYConstraint/matchingIndex/positionConstants)
+  FlickPhysics            tracking, rubber-banding, velocity projection, magnification curve
+  FlickMenuLayout         item and indicator metrics
+  FlickMenuMachine        pure reducer: events → state + effects
+Sources/flickUI/          SwiftUI/UIKit target; re-exports FlickCore.
+  FlickMenuModifier       the `flickMenu` modifier: gestures, rendering, effects → callbacks/haptics
+  FlickMenuSettings       environment settings and their modifiers
+  FlickEdgePanGesture     UIScreenEdgePanGestureRecognizer bridge
+  FlickMenuAction         programmatic open/close through the environment
+  FlickKeyboardCommands   hardware keyboard commands
+  Flick*Style, shapes     indicator, row and background styles; bubble and morphing shapes
+Tests/FlickCoreTests/     geometry, physics, state machine and the CariocaMenu regression vectors
+Tests/flickUITests/       the SwiftUI layer's pure parts (iOS only)
+Examples/FlickDemo/       showcase app
 ```
+
+Not yet built: a fold model (M7), hover peek, the App Intent and Control widget (M8).
 
 ### Key design decisions
 1. **Axis-generic geometry.** All the math works in terms of a "main axis"
@@ -241,9 +249,9 @@ Examples/FlickDemo/   Showcase app: every style, edge, physics preset and Duo po
    Center, and the bottom edge and the home indicator. The top and bottom edges
    use `preferredScreenEdgesDeferringSystemGestures`, so the system gesture runs
    first unless the app opts in to taking priority.
-3. **Pure state machine.** Events (`began`, `moved(velocity)`, `ended(velocity)`,
-   `cancelled`, `tapIndicator`, `tapOutside`, `hover`, `geometryChanged`,
-   `hingeChanged`) map to a new state plus effects (haptic, notify, animate). It
+3. **Pure state machine** (`FlickMenuMachine`). Events (`began`, `moved`, `ended`,
+   `cancelled`, `tapIndicator`, `open`, `chooseItem`, `moveHighlight`, `dismiss`,
+   `geometryChanged`, `selectionChanged`; `hover` and `hingeChanged` arrive with M7–M8) map to a new state plus effects (haptic, notify, animate). It
    replaces Carioca's flags and completion closures, and every transition can be
    interrupted.
 4. **Rendering.** The overlay is a `GlassEffectContainer` on iOS 26 and a

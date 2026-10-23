@@ -147,7 +147,9 @@ public struct FlickIndicatorMorph: Hashable, Sendable {
     public static let still = Self(resting: .drop, open: .drop, maximumStretch: 0, bounce: 0)
 
     /// The form for an indicator state.
-    /// - Parameter velocity: The finger's velocity along the edge, in points per second.
+    /// - Parameters:
+    ///   - isOpen: Whether the menu is open.
+    ///   - velocity: The finger's velocity along the edge, in points per second.
     public func form(isOpen: Bool, velocity: CGFloat) -> FlickShapeForm {
         let speed = min(abs(velocity) / 2000, 1)
         return (isOpen ? open : resting).stretched(by: maximumStretch * speed)

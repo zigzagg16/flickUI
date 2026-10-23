@@ -59,3 +59,6 @@ ContentView()
 `onFlickMenuEvent(_:)` reports when the menu opens, an item is highlighted or
 chosen, and when it is dismissed. Several handlers can be attached; all are called,
 outermost first.
+
+A menu nested in another menu's content inherits its styles and behaviour, but not
+its event handlers, keyboard shortcut or Pencil squeeze: those belong to one menu.

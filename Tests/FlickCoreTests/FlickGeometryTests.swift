@@ -152,6 +152,24 @@ struct FlickMenuLayoutTests {
         }
     }
 
+    @Test func directLookupMatchesResolvedSettings() {
+        var settings = FlickEdgeSettings(1)
+        settings.set(2, for: .leading)
+        settings.set(3, for: .top)
+        for rtl in [false, true] {
+            let resolved = settings.resolved(isRightToLeft: rtl)
+            for edge in FlickScreenEdge.allCases {
+                #expect(settings.value(for: edge, isRightToLeft: rtl) == resolved[edge])
+            }
+        }
+    }
+
+    @Test func defaultConfigurationRotatesTheIndicatorForTopAndBottom() {
+        let sizes = FlickMenuConfiguration().indicatorSize
+        #expect(sizes[.right] == FlickMenuLayout().indicatorSize)
+        #expect(sizes[.top] == FlickMenuLayout().indicatorFrame(for: .top))
+    }
+
     @Test func mapTransformsBaseAndOverrides() {
         var values = FlickEdgeValues<CGFloat>(10)
         values[.top] = 20

@@ -154,6 +154,7 @@ public struct FlickGeometry: Equatable, Sendable {
     /// The indicator's cross-axis placements, as distances from `edge` to its centre.
     ///
     /// - Parameters:
+    ///   - edge: The edge the indicator belongs to.
     ///   - indicatorSize: The indicator's size.
     ///   - margin: How far the resting indicator tucks past the edge,
     ///     and the gap it keeps from the far edge once it has traversed the screen.
@@ -173,8 +174,11 @@ public struct FlickGeometry: Equatable, Sendable {
     }
 
     /// The main-axis positions the resting indicator's centre may take.
-    /// - Parameter spacing: The gap kept from the safe area. Defaults to half the
-    ///   indicator's length, as in CariocaMenu.
+    /// - Parameters:
+    ///   - edge: The edge the indicator rests on.
+    ///   - indicatorSize: The indicator's physical size.
+    ///   - spacing: The gap kept from the safe area. Defaults to half the
+    ///     indicator's length, as in CariocaMenu.
     public func restingIndicatorRange(
         for edge: FlickScreenEdge,
         indicatorSize: CGSize,

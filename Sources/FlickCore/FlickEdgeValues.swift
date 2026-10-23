@@ -74,6 +74,12 @@ public struct FlickEdgeSettings<Value> {
         }
     }
 
+    /// The value for a physical edge. The same as `resolved(isRightToLeft:)[edge]`,
+    /// without building the physical overrides, so it is cheap enough for every frame.
+    public func value(for edge: FlickScreenEdge, isRightToLeft: Bool) -> Value {
+        self[edge.logical(isRightToLeft: isRightToLeft)]
+    }
+
     /// The values keyed by physical edge.
     public func resolved(isRightToLeft: Bool) -> FlickEdgeValues<Value> {
         var physical: [FlickScreenEdge: Value] = [:]

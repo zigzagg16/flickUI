@@ -85,6 +85,17 @@ struct FlickMenuSettings {
             handler.handle(event)
         }
     }
+
+    /// The settings seen by menus nested in a menu's content. Styles and behaviour
+    /// carry over; event handlers and input bindings belong to the outer menu, so an
+    /// outer handler never hears an inner menu's indices and a shortcut opens one menu.
+    var forNestedMenus: Self {
+        var settings = self
+        settings.eventHandlers = []
+        settings.keyboardShortcut = nil
+        settings.opensOnPencilSqueeze = false
+        return settings
+    }
 }
 
 extension EnvironmentValues {
@@ -186,6 +197,7 @@ extension View {
     }
 
     /// A keyboard shortcut that opens and closes the menu. None by default.
+    /// It applies to the menu it is attached to, not to menus nested in its content.
     ///
     /// Whatever this is set to, while a menu opened without a swipe is shown the arrow
     /// keys move through the items, Return chooses one and Escape closes it.
@@ -202,6 +214,7 @@ extension View {
     }
 
     /// Observes menu events. Several handlers can be attached; all are called.
+    /// Handlers hear only the menu they are attached to, not menus nested in its content.
     public func onFlickMenuEvent(_ handler: @escaping @MainActor (FlickMenuEvent) -> Void) -> some View {
         modifier(FlickMenuEventModifier(handler: handler))
     }

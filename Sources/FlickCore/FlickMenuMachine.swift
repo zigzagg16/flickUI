@@ -27,17 +27,22 @@ public struct FlickMenuConfiguration: Equatable, Sendable {
     public var homeFraction: CGFloat
     public var boomerang: FlickEdgeValues<FlickBoomerang>
     public var physics: FlickEdgeValues<FlickPhysics>
-    /// The indicator's size, used to keep it inside the safe area.
+    /// The indicator's physical size on each edge, used to keep it inside the safe area.
     public var indicatorSize: FlickEdgeValues<CGSize>
 
-    public static let defaultIndicatorSize = CGSize(width: 50, height: 40)
-
+    /// - Parameters:
+    ///   - homeEdge: The edge the indicator starts on.
+    ///   - homeFraction: The indicator's starting position along its edge, from 0 to 1.
+    ///   - boomerang: Where the indicator goes after an item is chosen, per edge.
+    ///   - physics: How the menu follows the finger, per edge.
+    ///   - indicatorSize: The indicator's physical size per edge. Defaults to the sizes
+    ///     of the default ``FlickMenuLayout``, rotated for the top and bottom edges.
     public init(
         homeEdge: FlickScreenEdge = .right,
         homeFraction: CGFloat = 0.5,
         boomerang: FlickEdgeValues<FlickBoomerang> = FlickEdgeValues(.stay),
         physics: FlickEdgeValues<FlickPhysics> = FlickEdgeValues(.fluid),
-        indicatorSize: FlickEdgeValues<CGSize> = FlickEdgeValues(FlickMenuConfiguration.defaultIndicatorSize)
+        indicatorSize: FlickEdgeValues<CGSize> = FlickEdgeValues(FlickMenuLayout()).indicatorFrames
     ) {
         self.homeEdge = homeEdge
         self.homeFraction = homeFraction
@@ -301,7 +306,7 @@ public struct FlickMenuMachine: Equatable, Sendable {
             anchorIndex: session.anchorIndex,
             physics: configuration.physics[session.edge]
         )
-        let raw = Self.flooredIndex(session.progress)
+        let raw = FlickTracking.flooredIndex(session.progress)
         session.isBeyondBounds = raw < 0 || raw >= geometry.itemCount
         session.highlightedIndex = Self.clampedIndex(raw, count: geometry.itemCount)
         phase = .open(session)
@@ -372,12 +377,6 @@ public struct FlickMenuMachine: Equatable, Sendable {
             for: edge,
             indicatorSize: configuration.indicatorSize[edge]
         )
-    }
-
-    private static func flooredIndex(_ progress: CGFloat) -> Int {
-        let value = progress.rounded(.down)
-        guard value.isFinite else { return 0 }
-        return Int(max(min(value, CGFloat(Int32.max)), CGFloat(Int32.min)))
     }
 
     private static func clampedIndex(_ index: Int, count: Int) -> Int {

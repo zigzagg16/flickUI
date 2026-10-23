@@ -139,7 +139,13 @@ public enum FlickTracking {
     /// The unclamped index under `position`. It can be negative or past the last item.
     public static func rawItemIndex(at position: CGFloat, menuOffset: CGFloat, itemLength: CGFloat) -> Int {
         guard itemLength > 0 else { return 0 }
-        let value = ((position - menuOffset) / itemLength).rounded(.down)
+        return flooredIndex((position - menuOffset) / itemLength)
+    }
+
+    /// The index containing a position measured in items, such as a progress.
+    /// It can be negative or past the last item.
+    static func flooredIndex(_ items: CGFloat) -> Int {
+        let value = items.rounded(.down)
         guard value.isFinite else { return 0 }
         // Keep the conversion to Int safe for absurd offsets.
         return Int(max(min(value, CGFloat(Int32.max)), CGFloat(Int32.min)))
