@@ -56,12 +56,18 @@ final class RoadMonitor {
     /// Analyzes a picture the app just loaded.
     func record(_ data: Data, for camera: Webcam) async {
         if let report = await RoadAnalyzer.shared.analyze(data, camera: camera.id, detectsVehicles: detectsVehicles) {
-            reports[camera.id] = report
+            store(report, for: camera)
         }
     }
 
     func recordFailure(for camera: Webcam) {
-        reports[camera.id] = .unavailable(at: .now)
+        store(.unavailable(at: .now), for: camera)
+    }
+
+    /// Keeps the report, and shares it with the widget.
+    private func store(_ report: RoadReport, for camera: Webcam) {
+        reports[camera.id] = report
+        RoadReportStore.save([camera.id: report])
     }
 
     /// Looks at each camera in turn, then again after `interval`, until cancelled.

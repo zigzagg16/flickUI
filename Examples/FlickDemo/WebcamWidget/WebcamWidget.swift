@@ -28,6 +28,8 @@ struct WebcamEntry: TimelineEntry {
     let camera: WebcamEntity
     /// The JPEG, or `nil` if it couldn't be loaded.
     let imageData: Data?
+    /// What the app last read from this camera, if recent.
+    var report: RoadReport?
 }
 
 struct WebcamProvider: AppIntentTimelineProvider {
@@ -50,7 +52,7 @@ struct WebcamProvider: AppIntentTimelineProvider {
     private func entry(for configuration: SelectWebcamIntent) async -> WebcamEntry {
         let camera = configuration.camera ?? .fallback
         let data = try? await CitaWebcams.image(of: camera.webcam)
-        return WebcamEntry(date: .now, camera: camera, imageData: data)
+        return WebcamEntry(date: .now, camera: camera, imageData: data, report: RoadReportStore.report(forCamera: camera.cameraID))
     }
 }
 
@@ -72,6 +74,14 @@ struct WebcamWidgetView: View {
                     .font(.caption2.monospacedDigit())
             }
             Spacer()
+            if let report = entry.report, let condition = report.conditions.first {
+                Label(condition, systemImage: report.symbol ?? "eye.fill")
+                    .font(.caption2.weight(.semibold))
+                    .lineLimit(1)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.black.opacity(0.45), in: Capsule())
+            }
             Text(entry.camera.place)
                 .font(family == .systemSmall ? .subheadline.bold() : .headline)
                 .lineLimit(1)

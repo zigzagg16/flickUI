@@ -127,7 +127,16 @@ The grid menu also sets which app opens at launch, stored in UserDefaults under
 The cita.lu code lives in `Examples/FlickDemo/CitaKit`, shared with a **Webcams
 widget** (small, medium and large): pick a camera in the widget's settings, and it
 shows that camera's image, refreshed by WidgetKit about every 15 minutes. Tapping
-it opens the camera in the app. Widgets can't play video, so there's no live stream. cita.lu has no webcam API, so the app
+it opens the camera in the app. Widgets can't play video, so there's no live stream.
+
+The Webcams app also reads the road from the pictures, on the device: frozen or
+missing cameras, day or night, visibility and weather (Vision), vehicles (a Core ML
+YOLOv3 Tiny model, downloaded on first use), the traffic level per carriageway from
+successive pictures, and the live stream's movement (Vision optical flow). Each
+camera's situation shows as its symbol in the side menu, in the header and on the
+widget, which shares the app's reports through the `group.dev.flickui.FlickDemo`
+App Group. These are estimates from the pictures, not an official traffic state; the
+**Traffic map** item shows cita.lu's own. cita.lu has no webcam API, so the app
 reads the camera list from each motorway's page and reloads each camera's JPEG every
 30 seconds. The live stream is the HLS playlist linked from the motorway's
 live-stream page, played muted until you unmute it.
