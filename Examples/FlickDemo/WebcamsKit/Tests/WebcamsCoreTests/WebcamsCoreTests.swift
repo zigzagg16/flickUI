@@ -9,6 +9,13 @@ struct CatalogTests {
         #expect(catalog.orderedMotorways.allSatisfy { !$0.enabledCameras.isEmpty || $0.liveStream != nil })
     }
 
+    @Test func listedCamerasHavePositions() throws {
+        let catalog = try #require(CatalogStore.bundled())
+        let cameras = catalog.motorways.flatMap(\.cameras)
+        #expect(!cameras.isEmpty)
+        #expect(cameras.allSatisfy { $0.coordinate != nil && $0.heading != nil })
+    }
+
     @Test func catalogRoundTrips() throws {
         let catalog = try #require(CatalogStore.bundled())
         #expect(try WebcamCatalog.decode(from: catalog.encoded()) == catalog)

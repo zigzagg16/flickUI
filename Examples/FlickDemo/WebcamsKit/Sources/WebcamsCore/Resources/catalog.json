@@ -126,133 +126,243 @@
           "id": "13034",
           "place": "Sanem",
           "direction": "Pétange",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13034.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13034.jpg",
+          "coordinate": {
+            "latitude": 49.543606,
+            "longitude": 5.919025
+          },
+          "heading": 235
         },
         {
           "id": "13035",
           "place": "Differdange",
           "direction": "Tunnel Aessen",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13035.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13035.jpg",
+          "coordinate": {
+            "latitude": 49.533797,
+            "longitude": 5.927823
+          },
+          "heading": 40
         },
         {
           "id": "147",
           "place": "Differdange",
           "direction": "Tunnel Aessen",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_147.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_147.jpg",
+          "coordinate": {
+            "latitude": 49.53212199999999,
+            "longitude": 5.936548999999999
+          },
+          "heading": 15
         },
         {
           "id": "13039",
           "place": "Tunnel Aessen",
           "direction": "Tunnel Ehlerange",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13039.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13039.jpg",
+          "coordinate": {
+            "latitude": 49.52810600000001,
+            "longitude": 5.96547
+          },
+          "heading": 60
         },
         {
           "id": "13042",
           "place": "Jonction Lankelz",
           "direction": "Tunnel Ehlerange",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13042.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13042.jpg",
+          "coordinate": {
+            "latitude": 49.519714,
+            "longitude": 5.971998999999999
+          },
+          "heading": 235
         },
         {
           "id": "13043",
           "place": "Jonction Lankelz",
           "direction": "Tunnel Ehlerange",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13043.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13043.jpg",
+          "coordinate": {
+            "latitude": 49.51306,
+            "longitude": 5.97622
+          },
+          "heading": 250
         },
         {
           "id": "13050",
           "place": "Kayl",
           "direction": "Schifflange",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13050.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13050.jpg",
+          "coordinate": {
+            "latitude": 49.509339,
+            "longitude": 6.035996
+          },
+          "heading": 220
         },
         {
           "id": "13051",
           "place": "Kayl",
           "direction": "Dudelange",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13051.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13051.jpg",
+          "coordinate": {
+            "latitude": 49.49955199999999,
+            "longitude": 6.053242
+          },
+          "heading": 15
         },
         {
           "id": "164",
           "place": "Dudelange",
           "direction": "Croix de Bettembourg",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_164.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_164.jpg",
+          "coordinate": {
+            "latitude": 49.500064,
+            "longitude": 6.08761
+          },
+          "heading": 15
         },
         {
           "id": "13054",
           "place": "Croix de Bettembourg",
           "direction": "Dudelange",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13054.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13054.jpg",
+          "coordinate": {
+            "latitude": 49.496068,
+            "longitude": 6.109468
+          },
+          "heading": 185
         },
         {
           "id": "13055",
           "place": "Hellange",
           "direction": "Croix de Bettembourg",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13055.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13055.jpg",
+          "coordinate": {
+            "latitude": 49.498911,
+            "longitude": 6.124450000000001
+          },
+          "heading": 325
         },
         {
           "id": "13057",
           "place": "Hellange",
           "direction": "Frisange",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13057.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13057.jpg",
+          "coordinate": {
+            "latitude": 49.508372,
+            "longitude": 6.185405000000001
+          },
+          "heading": 25
         },
         {
           "id": "13060",
           "place": "Altwies",
           "direction": "Frisange",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13060.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13060.jpg",
+          "coordinate": {
+            "latitude": 49.50698300000001,
+            "longitude": 6.197631
+          },
+          "heading": 165
         },
         {
           "id": "13062",
           "place": "Altwies",
           "direction": "Mondorf",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13062.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13062.jpg",
+          "coordinate": {
+            "latitude": 49.516918,
+            "longitude": 6.247724
+          },
+          "heading": 155
         },
         {
           "id": "13016",
           "place": "Mondorf",
           "direction": "Altwies",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13016.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13016.jpg",
+          "coordinate": {
+            "latitude": 49.51829,
+            "longitude": 6.27632
+          },
+          "heading": 190
         },
         {
           "id": "13065",
           "place": "Altwies",
           "direction": "Mondorf",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13065.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13065.jpg",
+          "coordinate": {
+            "latitude": 49.51516,
+            "longitude": 6.28634
+          },
+          "heading": 25
         },
         {
           "id": "13066",
           "place": "Mondorf",
           "direction": "Altwies",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13066.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13066.jpg",
+          "coordinate": {
+            "latitude": 49.51529,
+            "longitude": 6.28594
+          },
+          "heading": 215
         },
         {
           "id": "13070",
           "place": "Tunnel Markusbierg",
           "direction": "Mondorf",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13070.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13070.jpg",
+          "coordinate": {
+            "latitude": 49.49859299999999,
+            "longitude": 6.308690000000001
+          },
+          "heading": 230
         },
         {
           "id": "13071",
           "place": "Mondorf",
           "direction": "Markusbierg",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13071.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13071.jpg",
+          "coordinate": {
+            "latitude": 49.482711,
+            "longitude": 6.338178000000001
+          },
+          "heading": 45
         },
         {
           "id": "13072",
           "place": "Tunnel Markusbierg",
           "direction": "Mondorf",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13072.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13072.jpg",
+          "coordinate": {
+            "latitude": 49.48304,
+            "longitude": 6.33775
+          },
+          "heading": 225
         },
         {
           "id": "13073",
           "place": "Schengen",
           "direction": "Allemagne",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13073.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13073.jpg",
+          "coordinate": {
+            "latitude": 49.47798,
+            "longitude": 6.36335
+          },
+          "heading": 340
         },
         {
           "id": "13074",
           "place": "Schengen",
           "direction": "Tunnel Markusbierg",
-          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13074.jpg"
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_13074.jpg",
+          "coordinate": {
+            "latitude": 49.47783,
+            "longitude": 6.36209
+          },
+          "heading": 170
         }
       ]
     }

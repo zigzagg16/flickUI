@@ -56,6 +56,8 @@ public struct WebcamCatalog: Codable, Hashable, Sendable {
         /// How often the source updates the picture, in seconds.
         public var refreshInterval: TimeInterval?
         public var coordinate: Coordinate?
+        /// Which way the camera points on a map, in degrees clockwise from north.
+        public var heading: Double?
         /// The road's direction of travel on each half of the picture, for the
         /// traffic estimate per carriageway.
         public var carriageways: Carriageways?

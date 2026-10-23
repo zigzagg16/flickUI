@@ -13,7 +13,8 @@ Output shape:
       "language": "fr",
       "fetchedAt": "2026-10-23T14:30:00Z",
       "highways":    [{"id", "code", "name", "webcamPage", "liveStreamPage"}],
-      "webcams":     {"<highway id>": [{"id", "location", "direction", "imageURL", "pageURL"}]},
+      "webcams":     {"<highway id>": [{"id", "location", "direction", "imageURL", "pageURL",
+                                        "coordinate", "heading"}]},
       "liveStreams": {"<highway id>": {"url", "poster", "page"}},
       "events":      [{"id", "type", "cause", "road", "destination", "place", "comment",
                        "startTime", "endTime", "updatedAt", "lanesRestricted",
@@ -22,7 +23,11 @@ Output shape:
     }
 
 The webcams have no API, so they are read from the HTML. If cita.lu changes
-its markup, the patterns below are the only things to update.
+its markup, the patterns below are the only things to update. Their
+positions come from the cameras KML on data.public.lu, matched by id:
+"coordinate" is {"latitude", "longitude"}, and "heading" is the way the
+camera's map icon points, in degrees clockwise from north. Both are null for
+a camera the KML doesn't list.
 
 The traffic comes from the open data feeds published on data.public.lu:
 "events" are incidents and roadworks from the DATEX II v3.6 situation
@@ -60,6 +65,7 @@ DIRECTION_PREFIX = re.compile(r"^(direction|Richtung|towards)\s+", re.I)
 
 EVENTS_URL = "https://cita.lu/info_trafic/datex/situationrecord36"
 TRAVEL_TIMES_URL = "https://www.cita.lu/kml/temps_parcours.kml"
+CAMERAS_URL = "https://www.cita.lu/kml/cameras.kml"
 SIT = "{http://datex2.eu/schema/3/situation}"
 LOC = "{http://datex2.eu/schema/3/locationReferencing}"
 COM = "{http://datex2.eu/schema/3/common}"
@@ -72,6 +78,13 @@ CAUSES = ["roadMaintenanceType", "constructionWorkType", "vehicleObstructionType
 SIGN = re.compile(
     r"<Placemark[^>]*>\s*<name>([^<]*)</name>.*?"
     r"<description><!\[CDATA\[(.*?)\]\]></description>.*?"
+    r"<coordinates>\s*([-\d.]+),([-\d.]+)",
+    re.S,
+)
+# One camera: <Placemark id="camera_14"> … the icon cctv_185.png points to 185° … <coordinates>lon,lat
+CAMERA = re.compile(
+    r'<Placemark id="camera_(\d+)">.*?'
+    r"(?:cctv_(\d+)\.png.*?)?"
     r"<coordinates>\s*([-\d.]+),([-\d.]+)",
     re.S,
 )
@@ -110,6 +123,18 @@ def fetch_webcams(page):
             "pageURL": f"{BASE}/webcam/map/{cam_id}/full",
         })
     return cams
+
+
+def fetch_camera_positions():
+    """Each camera's coordinate and heading, by camera id."""
+    kml = get_url(CAMERAS_URL).decode("utf-8", errors="replace")
+    return {
+        int(cam_id): {
+            "coordinate": {"latitude": float(latitude), "longitude": float(longitude)},
+            "heading": int(heading) if heading else None,
+        }
+        for cam_id, heading, longitude, latitude in CAMERA.findall(kml)
+    }
 
 
 def fetch_live_stream(page, page_path):
@@ -225,6 +250,14 @@ def fetch(lang):
                 "webcamPage": None,
                 "liveStreamPage": f"{BASE}/{lang}/live-stream/{highway_id}.html",
             })
+
+    positions = fetch_camera_positions()
+    for cam in (cam for cams in webcams.values() for cam in cams):
+        cam.update(positions.get(cam["id"], {"coordinate": None, "heading": None}))
+    listed = {cam["id"] for cams in webcams.values() for cam in cams}
+    unlisted = sorted(set(positions) - listed)
+    if unlisted:
+        print(f"cameras.kml lists cameras on no webcam page: {unlisted}", file=sys.stderr)
 
     for highway_id in stream_menu:
         path = f"/{lang}/live-stream/{highway_id}.html"
