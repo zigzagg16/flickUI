@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-23T14:30:00Z",
+  "updatedAt": "2026-10-23T19:35:37Z",
   "source": {
     "name": "CITA",
     "website": "https://www.cita.lu",
@@ -31,7 +31,195 @@
         "imageURL": "https://www.cita.lu/webcam/service/a1",
         "refreshInterval": 60
       },
-      "cameras": []
+      "cameras": [
+        {
+          "id": "46",
+          "place": "Croix de Gasperich",
+          "direction": "Tunnel Howald",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_46.jpg",
+          "coordinate": {
+            "latitude": 49.575586,
+            "longitude": 6.129247
+          },
+          "heading": 15
+        },
+        {
+          "id": "70",
+          "place": "Croix de Gasperich",
+          "direction": "Tunnel Howald",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_70.jpg",
+          "coordinate": {
+            "latitude": 49.575627,
+            "longitude": 6.144558
+          },
+          "heading": 340
+        },
+        {
+          "id": "77",
+          "place": "Sandweiler",
+          "direction": "Tunnel Howald",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_77.jpg",
+          "coordinate": {
+            "latitude": 49.580374,
+            "longitude": 6.154393
+          },
+          "heading": 130
+        },
+        {
+          "id": "81",
+          "place": "Tunnel Howald",
+          "direction": "Sandweiler",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_81.jpg",
+          "coordinate": {
+            "latitude": 49.594752,
+            "longitude": 6.169689
+          },
+          "heading": 305
+        },
+        {
+          "id": "84",
+          "place": "Tunnel Howald",
+          "direction": "Sandweiler",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_84.jpg",
+          "coordinate": {
+            "latitude": 49.611848,
+            "longitude": 6.177246000000001
+          },
+          "heading": 290
+        },
+        {
+          "id": "86",
+          "place": "Sandweiler",
+          "direction": "Tunnel Cents",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_86.jpg",
+          "coordinate": {
+            "latitude": 49.61758300000001,
+            "longitude": 6.179317000000001
+          },
+          "heading": 265
+        },
+        {
+          "id": "91",
+          "place": "Kirchberg",
+          "direction": "Tunnel Cents",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_91.jpg",
+          "coordinate": {
+            "latitude": 49.623833,
+            "longitude": 6.180478000000001
+          },
+          "heading": 115
+        },
+        {
+          "id": "95",
+          "place": "Jonction Grünewald",
+          "direction": "Kirchberg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_95.jpg",
+          "coordinate": {
+            "latitude": 49.639152,
+            "longitude": 6.185899
+          },
+          "heading": 135
+        },
+        {
+          "id": "98",
+          "place": "Senningerberg",
+          "direction": "Jonction Grünewald",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_98.jpg",
+          "coordinate": {
+            "latitude": 49.641986,
+            "longitude": 6.198055
+          },
+          "heading": 170
+        },
+        {
+          "id": "100",
+          "place": "Jonction Grünewald",
+          "direction": "Senningerberg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_100.jpg",
+          "coordinate": {
+            "latitude": 49.64289399999999,
+            "longitude": 6.211146
+          },
+          "heading": 0
+        },
+        {
+          "id": "101",
+          "place": "Senningerberg",
+          "direction": "Cargo Center",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_101.jpg",
+          "coordinate": {
+            "latitude": 49.641509,
+            "longitude": 6.225322
+          },
+          "heading": 20
+        },
+        {
+          "id": "107",
+          "place": "Münsbach",
+          "direction": "Cargo Center",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_107.jpg",
+          "coordinate": {
+            "latitude": 49.63708,
+            "longitude": 6.24089
+          },
+          "heading": 185
+        },
+        {
+          "id": "109",
+          "place": "Münsbach",
+          "direction": "Cargo Center",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_109.jpg",
+          "coordinate": {
+            "latitude": 49.64134499999999,
+            "longitude": 6.26779
+          },
+          "heading": 155
+        },
+        {
+          "id": "110",
+          "place": "Münsbach",
+          "direction": "Flaxweiler",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_110.jpg",
+          "coordinate": {
+            "latitude": 49.642347,
+            "longitude": 6.274969
+          },
+          "heading": 350
+        },
+        {
+          "id": "1004",
+          "place": "Flaxweiler",
+          "direction": "Münsbach",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_1004.jpg",
+          "coordinate": {
+            "latitude": 49.662139,
+            "longitude": 6.352548
+          },
+          "heading": 145
+        },
+        {
+          "id": "112",
+          "place": "Potaschbierg",
+          "direction": "Mertert",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_112.jpg",
+          "coordinate": {
+            "latitude": 49.678677,
+            "longitude": 6.398328
+          },
+          "heading": 310
+        },
+        {
+          "id": "114",
+          "place": "Mertert",
+          "direction": "Potaschbierg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_114.jpg",
+          "coordinate": {
+            "latitude": 49.693237,
+            "longitude": 6.446401
+          },
+          "heading": 145
+        }
+      ]
     },
     {
       "id": "a3",
@@ -49,7 +237,184 @@
         "imageURL": "https://www.cita.lu/webcam/service/a3",
         "refreshInterval": 60
       },
-      "cameras": []
+      "cameras": [
+        {
+          "id": "48",
+          "place": "Croix de Gasperich",
+          "direction": "Hesperange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_48.jpg",
+          "coordinate": {
+            "latitude": 49.578395,
+            "longitude": 6.125608
+          },
+          "heading": 115
+        },
+        {
+          "id": "41",
+          "place": "Croix de Gasperich",
+          "direction": "Aire de Berchem",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_41.jpg",
+          "coordinate": {
+            "latitude": 49.572918,
+            "longitude": 6.124447
+          },
+          "heading": 75
+        },
+        {
+          "id": "3011",
+          "place": "Hesperange",
+          "direction": "Croix de Gasperich",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_3011.jpg",
+          "coordinate": {
+            "latitude": 49.566085,
+            "longitude": 6.128379
+          },
+          "heading": 245
+        },
+        {
+          "id": "3012",
+          "place": "Hesperange",
+          "direction": "Croix de Gasperich",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_3012.jpg",
+          "coordinate": {
+            "latitude": 49.564785,
+            "longitude": 6.128937
+          },
+          "heading": 255
+        },
+        {
+          "id": "3033",
+          "place": "Aire de Berchem",
+          "direction": "Bettembourg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_3033.jpg",
+          "coordinate": {
+            "latitude": 49.54193,
+            "longitude": 6.118075
+          },
+          "heading": 125
+        },
+        {
+          "id": "3034",
+          "place": "Aire de Berchem",
+          "direction": "Hesperange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_3034.jpg",
+          "coordinate": {
+            "latitude": 49.541871,
+            "longitude": 5.943667
+          },
+          "heading": 50
+        },
+        {
+          "id": "53",
+          "place": "Aire de Berchem",
+          "direction": "Bettembourg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_53.jpg",
+          "coordinate": {
+            "latitude": 49.53667,
+            "longitude": 6.114088
+          },
+          "heading": 95
+        },
+        {
+          "id": "3045",
+          "place": "Bettembourg",
+          "direction": "Croix de Bettembourg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_3045.jpg",
+          "coordinate": {
+            "latitude": 49.51637,
+            "longitude": 6.116586
+          },
+          "heading": 105
+        },
+        {
+          "id": "3046",
+          "place": "Bettembourg",
+          "direction": "Livange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_3046.jpg",
+          "coordinate": {
+            "latitude": 49.515463,
+            "longitude": 6.116226
+          },
+          "heading": 275
+        },
+        {
+          "id": "62",
+          "place": "Croix de Bettembourg",
+          "direction": "Bettembourg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_62.jpg",
+          "coordinate": {
+            "latitude": 49.501434,
+            "longitude": 6.116057
+          },
+          "heading": 260
+        },
+        {
+          "id": "61",
+          "place": "Croix de Bettembourg",
+          "direction": "Dudelange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_61.jpg",
+          "coordinate": {
+            "latitude": 49.501451,
+            "longitude": 6.115924
+          },
+          "heading": 75
+        },
+        {
+          "id": "63",
+          "place": "France",
+          "direction": "Croix de Bettembourg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_63.jpg",
+          "coordinate": {
+            "latitude": 49.49576,
+            "longitude": 6.11733
+          },
+          "heading": 265
+        },
+        {
+          "id": "64",
+          "place": "Croix de Bettembourg",
+          "direction": "France",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_64.jpg",
+          "coordinate": {
+            "latitude": 49.490554,
+            "longitude": 6.117045
+          },
+          "heading": 90
+        },
+        {
+          "id": "66",
+          "place": "France",
+          "direction": "Croix de Bettembourg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_66.jpg",
+          "coordinate": {
+            "latitude": 49.49199399999999,
+            "longitude": 6.116903
+          },
+          "heading": 275
+        },
+        {
+          "id": "57",
+          "place": "Caméra 57",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_57.jpg",
+          "coordinate": {
+            "latitude": 49.525059,
+            "longitude": 6.114897
+          },
+          "heading": 70,
+          "isEnabled": false
+        },
+        {
+          "id": "58",
+          "place": "Caméra 58",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_58.jpg",
+          "coordinate": {
+            "latitude": 49.52505,
+            "longitude": 6.115066
+          },
+          "heading": 260,
+          "isEnabled": false
+        }
+      ]
     },
     {
       "id": "a4",
@@ -67,7 +432,140 @@
         "imageURL": "https://www.cita.lu/webcam/service/a4",
         "refreshInterval": 60
       },
-      "cameras": []
+      "cameras": [
+        {
+          "id": "36",
+          "place": "Croix de Cessange",
+          "direction": "Luxembourg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_36.jpg",
+          "coordinate": {
+            "latitude": 49.600436,
+            "longitude": 6.100459
+          },
+          "heading": 355
+        },
+        {
+          "id": "4025",
+          "place": "Luxembourg",
+          "direction": "Croix de Cessange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_4025.jpg",
+          "coordinate": {
+            "latitude": 49.59176800000001,
+            "longitude": 6.088534000000001
+          },
+          "heading": 105
+        },
+        {
+          "id": "120",
+          "place": "Leudelange",
+          "direction": "Croix de Cessange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_120.jpg",
+          "coordinate": {
+            "latitude": 49.580267,
+            "longitude": 6.087511999999999
+          },
+          "heading": 265
+        },
+        {
+          "id": "122",
+          "place": "Croix de Cessange",
+          "direction": "Leudelange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_122.jpg",
+          "coordinate": {
+            "latitude": 49.572053,
+            "longitude": 6.088293
+          },
+          "heading": 100
+        },
+        {
+          "id": "125",
+          "place": "Pontpierre",
+          "direction": "Leudelange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_125.jpg",
+          "coordinate": {
+            "latitude": 49.563694,
+            "longitude": 6.080833
+          },
+          "heading": 325
+        },
+        {
+          "id": "133",
+          "place": "jonction de Foetz",
+          "direction": "Pontpierre",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_133.jpg",
+          "coordinate": {
+            "latitude": 49.534645,
+            "longitude": 6.021228
+          },
+          "heading": 315
+        },
+        {
+          "id": "137",
+          "place": "jonction de Foetz",
+          "direction": "Esch",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_137.jpg",
+          "coordinate": {
+            "latitude": 49.525111,
+            "longitude": 6.007207
+          },
+          "heading": 125
+        },
+        {
+          "id": "4021",
+          "place": "Esch",
+          "direction": "jonction Lankelz",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_4021.jpg",
+          "coordinate": {
+            "latitude": 49.519332,
+            "longitude": 6.001025
+          },
+          "heading": 135
+        },
+        {
+          "id": "4003",
+          "place": "Jonction Lankelz",
+          "direction": "Esch",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_4003.jpg",
+          "coordinate": {
+            "latitude": 49.51296,
+            "longitude": 5.97666
+          },
+          "heading": 345
+        },
+        {
+          "id": "4019",
+          "place": "Belval Université",
+          "direction": "Luxembourg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_4019.jpg",
+          "coordinate": {
+            "latitude": 49.507107,
+            "longitude": 5.949003
+          },
+          "heading": 340
+        },
+        {
+          "id": "866",
+          "place": "Belval-gare",
+          "direction": "Esch",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_866.jpg",
+          "coordinate": {
+            "latitude": 49.499464,
+            "longitude": 5.942979
+          },
+          "heading": 295
+        },
+        {
+          "id": "874",
+          "place": "Belval-gare",
+          "direction": "France",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_874.jpg",
+          "coordinate": {
+            "latitude": 49.495555,
+            "longitude": 5.943667
+          },
+          "heading": 50
+        }
+      ]
     },
     {
       "id": "a6",
@@ -85,7 +583,129 @@
         "imageURL": "https://www.cita.lu/webcam/service/a6",
         "refreshInterval": 60
       },
-      "cameras": []
+      "cameras": [
+        {
+          "id": "42",
+          "place": "Croix de Cessange",
+          "direction": "Croix de Gasperich",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_42.jpg",
+          "coordinate": {
+            "latitude": 49.577968,
+            "longitude": 6.114231999999999
+          },
+          "heading": 5
+        },
+        {
+          "id": "37",
+          "place": "Croix de Cessange",
+          "direction": "Croix de Gasperich",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_37.jpg",
+          "coordinate": {
+            "latitude": 49.583503,
+            "longitude": 6.090563999999999
+          },
+          "heading": 40
+        },
+        {
+          "id": "30",
+          "place": "Bertrange",
+          "direction": "Croix de Cessange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_30.jpg",
+          "coordinate": {
+            "latitude": 49.59029199999999,
+            "longitude": 6.08332
+          },
+          "heading": 65
+        },
+        {
+          "id": "27",
+          "place": "Croix de Cessange",
+          "direction": "Bertrange",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_27.jpg",
+          "coordinate": {
+            "latitude": 49.60252499999999,
+            "longitude": 6.080064
+          },
+          "heading": 275
+        },
+        {
+          "id": "21",
+          "place": "Bridel",
+          "direction": "Strassen",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_21.jpg",
+          "coordinate": {
+            "latitude": 49.62589800000001,
+            "longitude": 6.078979
+          },
+          "heading": 50
+        },
+        {
+          "id": "14",
+          "place": "Bridel",
+          "direction": "Mamer",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_14.jpg",
+          "coordinate": {
+            "latitude": 49.631191,
+            "longitude": 6.042489
+          },
+          "heading": 185
+        },
+        {
+          "id": "15",
+          "place": "Mamer",
+          "direction": "Bridel",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_15.jpg",
+          "coordinate": {
+            "latitude": 49.630825,
+            "longitude": 6.043661000000001
+          },
+          "heading": 5
+        },
+        {
+          "id": "17",
+          "place": "Mamer",
+          "direction": "Bridel",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_17.jpg",
+          "coordinate": {
+            "latitude": 49.639011,
+            "longitude": 6.010675
+          },
+          "heading": 5
+        },
+        {
+          "id": "11",
+          "place": "Steinfort",
+          "direction": "Mamer",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_11.jpg",
+          "coordinate": {
+            "latitude": 49.634825,
+            "longitude": 5.978123
+          },
+          "heading": 10
+        },
+        {
+          "id": "6006",
+          "place": "Steinfort",
+          "direction": "Mamer",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_6006.jpg",
+          "coordinate": {
+            "latitude": 49.636012,
+            "longitude": 5.962785
+          },
+          "heading": 355
+        },
+        {
+          "id": "3",
+          "place": "Steinfort",
+          "direction": "Belgique",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_3.jpg",
+          "coordinate": {
+            "latitude": 49.63694099999999,
+            "longitude": 5.921276000000001
+          },
+          "heading": 185
+        }
+      ]
     },
     {
       "id": "a7",
@@ -103,7 +723,206 @@
         "imageURL": "https://www.cita.lu/webcam/service/a7",
         "refreshInterval": 60
       },
-      "cameras": []
+      "cameras": [
+        {
+          "id": "603",
+          "place": "Echangeur Grünewald",
+          "direction": "Tunnel Stafelter",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_603.jpg",
+          "coordinate": {
+            "latitude": 49.64104,
+            "longitude": 6.18944
+          },
+          "heading": 255
+        },
+        {
+          "id": "607",
+          "place": "Echangeur Waldhaff",
+          "direction": "route d’Echternach (N11)",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_607.jpg",
+          "coordinate": {
+            "latitude": 49.651517,
+            "longitude": 6.187002
+          },
+          "heading": 235
+        },
+        {
+          "id": "609",
+          "place": "Tunnel Stafelter",
+          "direction": "Echangeur Grünewald",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_609.jpg",
+          "coordinate": {
+            "latitude": 49.652457,
+            "longitude": 6.184923
+          },
+          "heading": 70
+        },
+        {
+          "id": "608",
+          "place": "Echangeur Waldhaff",
+          "direction": "Tunnel Stafelter",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_608.jpg",
+          "coordinate": {
+            "latitude": 49.653411,
+            "longitude": 6.183968
+          },
+          "heading": 225
+        },
+        {
+          "id": "650",
+          "place": "Tunnel Stafelter",
+          "direction": "Passage à gibier Rëngelbour",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_650.jpg",
+          "coordinate": {
+            "latitude": 49.667179,
+            "longitude": 6.160425
+          },
+          "heading": 245
+        },
+        {
+          "id": "651",
+          "place": "Passage à gibier Rëngelbour",
+          "direction": "Tunnel Stafelter",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_651.jpg",
+          "coordinate": {
+            "latitude": 49.666765,
+            "longitude": 6.160857
+          },
+          "heading": 50
+        },
+        {
+          "id": "657",
+          "place": "Passage à gibier Rëngelbour",
+          "direction": "Tunnel Grouft",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_657.jpg",
+          "coordinate": {
+            "latitude": 49.68646,
+            "longitude": 6.1621
+          },
+          "heading": 285
+        },
+        {
+          "id": "653",
+          "place": "Passage à gibier Rëngelbour",
+          "direction": "Tunnel Grouft",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_653.jpg",
+          "coordinate": {
+            "latitude": 49.6734,
+            "longitude": 6.15878
+          },
+          "heading": 265
+        },
+        {
+          "id": "738",
+          "place": "Tunnel Grouft",
+          "direction": "Friedhoff",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_738.jpg",
+          "coordinate": {
+            "latitude": 49.70693,
+            "longitude": 6.13934
+          },
+          "heading": 160
+        },
+        {
+          "id": "400",
+          "place": "Tunnel Gousselerbierg",
+          "direction": "rondpoint Lorentzweiler",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_400.jpg",
+          "coordinate": {
+            "latitude": 49.706237,
+            "longitude": 6.132427
+          },
+          "heading": 355
+        },
+        {
+          "id": "7275",
+          "place": "Tunnel Gousselerbierg",
+          "direction": "Lorentzweiler",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_7275.jpg",
+          "coordinate": {
+            "latitude": 49.708456,
+            "longitude": 6.119921
+          },
+          "heading": 30
+        },
+        {
+          "id": "7276",
+          "place": "Lorentzweiler",
+          "direction": "Tunnel Gousselerbierg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_7276.jpg",
+          "coordinate": {
+            "latitude": 49.708333,
+            "longitude": 6.119908
+          },
+          "heading": 220
+        },
+        {
+          "id": "7279",
+          "place": "Tunnel Gousselerbierg",
+          "direction": "Lorentzweiler",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_7279.jpg",
+          "coordinate": {
+            "latitude": 49.732158,
+            "longitude": 6.103481
+          },
+          "heading": 45
+        },
+        {
+          "id": "7281",
+          "place": "Schoenfels",
+          "direction": "Tunnel Mersch",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_7281.jpg",
+          "coordinate": {
+            "latitude": 49.740257,
+            "longitude": 6.095430000000001
+          },
+          "heading": 235
+        },
+        {
+          "id": "7282",
+          "place": "Tunnel Mersch",
+          "direction": "Merscherbierg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_7282.jpg",
+          "coordinate": {
+            "latitude": 49.745886,
+            "longitude": 6.090164000000001
+          },
+          "heading": 75
+        },
+        {
+          "id": "458",
+          "place": "Roost",
+          "direction": "Merscherbierg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_458.jpg",
+          "coordinate": {
+            "latitude": 49.75802,
+            "longitude": 6.0923
+          },
+          "heading": 95
+        },
+        {
+          "id": "466",
+          "place": "Colmarberg",
+          "direction": "Roost",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_466.jpg",
+          "coordinate": {
+            "latitude": 49.80158,
+            "longitude": 6.11052
+          },
+          "heading": 105
+        },
+        {
+          "id": "471",
+          "place": "Ettelbruck",
+          "direction": "Colmarberg",
+          "imageURL": "https://www.cita.lu/info_trafic/cameras/images/cccam_471.jpg",
+          "coordinate": {
+            "latitude": 49.817915,
+            "longitude": 6.098523
+          },
+          "heading": 70
+        }
+      ]
     },
     {
       "id": "a13",

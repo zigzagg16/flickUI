@@ -5,6 +5,7 @@ Standard library only. Prints JSON to stdout, or writes it to a file:
 
     python3 fetch_cita.py                 # French labels, to stdout
     python3 fetch_cita.py --lang en -o cita.json
+    python3 fetch_cita.py --catalog ../Sources/WebcamsCore/Resources/catalog.json
 
 Output shape:
 
@@ -14,7 +15,7 @@ Output shape:
       "fetchedAt": "2026-10-23T14:30:00Z",
       "highways":    [{"id", "code", "name", "webcamPage", "liveStreamPage"}],
       "webcams":     {"<highway id>": [{"id", "location", "direction", "imageURL", "pageURL",
-                                        "coordinate", "heading"}]},
+                                        "coordinate", "heading", "listed"}]},
       "liveStreams": {"<highway id>": {"url", "poster", "page"}},
       "events":      [{"id", "type", "cause", "road", "destination", "place", "comment",
                        "startTime", "endTime", "updatedAt", "lanesRestricted",
@@ -22,12 +23,21 @@ Output shape:
       "travelTimes": [{"id", "name", "coordinate", "destinations": [{"name", "minutes"}]}]
     }
 
-The webcams have no API, so they are read from the HTML. If cita.lu changes
-its markup, the patterns below are the only things to update. Their
-positions come from the cameras KML on data.public.lu, matched by id:
-"coordinate" is {"latitude", "longitude"}, and "heading" is the way the
-camera's map icon points, in degrees clockwise from north. Both are null for
-a camera the KML doesn't list.
+The cameras come from the official source first: the cameras KML on
+data.public.lu lists every camera with its road, "coordinate" (latitude,
+longitude) and "heading", the way its map icon points in degrees clockwise
+from north. The website then fills in what the KML lacks: the place and
+direction, the picture, and the highway page each camera is shown on, which
+wins over the KML's road. "listed" is false for a camera the website doesn't
+show; its picture is then cita.lu's "camera unavailable" placeholder. The
+website has no API, so it is read from the HTML: if cita.lu changes its
+markup, the patterns below are the only things to update.
+
+With --catalog, the cameras, live streams and pages are also written into
+the app's catalog.json: each motorway's cameras are replaced by the ones
+fetched, keeping the hand-tuned fields (see KEPT_CAMERA_FIELDS) of cameras
+already there. Unlisted cameras are kept but disabled. Use French labels,
+the default, for the bundled catalog.
 
 The traffic comes from the open data feeds published on data.public.lu:
 "events" are incidents and roadworks from the DATEX II v3.6 situation
@@ -81,9 +91,11 @@ SIGN = re.compile(
     r"<coordinates>\s*([-\d.]+),([-\d.]+)",
     re.S,
 )
-# One camera: <Placemark id="camera_14"> … the icon cctv_185.png points to 185° … <coordinates>lon,lat
+IMAGE_URL = BASE + "/info_trafic/cameras/images/cccam_{id}.jpg"
+# One camera: <Placemark id="camera_14"><name>A6 - Camera 14</name> … the icon
+# cctv_185.png points to 185° … <coordinates>lon,lat
 CAMERA = re.compile(
-    r'<Placemark id="camera_(\d+)">.*?'
+    r'<Placemark id="camera_(\d+)">\s*<name>\s*([A-Z]+\d+)?.*?'
     r"(?:cctv_(\d+)\.png.*?)?"
     r"<coordinates>\s*([-\d.]+),([-\d.]+)",
     re.S,
@@ -125,16 +137,53 @@ def fetch_webcams(page):
     return cams
 
 
-def fetch_camera_positions():
-    """Each camera's coordinate and heading, by camera id."""
+def fetch_official_cameras():
+    """Every camera in the cameras KML, by id, in its order: road, coordinate, heading."""
     kml = get_url(CAMERAS_URL).decode("utf-8", errors="replace")
     return {
         int(cam_id): {
+            "road": road.lower() if road else None,
             "coordinate": {"latitude": float(latitude), "longitude": float(longitude)},
             "heading": int(heading) if heading else None,
         }
-        for cam_id, heading, longitude, latitude in CAMERA.findall(kml)
+        for cam_id, road, heading, longitude, latitude in CAMERA.findall(kml)
     }
+
+
+def merge_cameras(official, website):
+    """The official cameras, filled in with the website's, per highway id."""
+    shown_on = {cam["id"]: highway for highway, cams in website.items() for cam in cams}
+    webcams = {highway: [] for highway in website}
+    # Website order first, as the site lists them, then the cameras it doesn't show.
+    for highway, cams in website.items():
+        for cam in cams:
+            position = official.get(cam["id"])
+            if position is None:
+                print(f"camera {cam['id']} on {highway} is not in cameras.kml", file=sys.stderr)
+            elif position["road"] and position["road"] != highway:
+                print(f"camera {cam['id']} is on {position['road']} in cameras.kml, "
+                      f"shown on {highway}", file=sys.stderr)
+            webcams[highway].append({
+                **cam,
+                "coordinate": position and position["coordinate"],
+                "heading": position and position["heading"],
+                "listed": True,
+            })
+    for cam_id, position in official.items():
+        if cam_id in shown_on or not position["road"]:
+            continue
+        print(f"camera {cam_id} on {position['road']} is on no webcam page", file=sys.stderr)
+        webcams.setdefault(position["road"], []).append({
+            "id": cam_id,
+            "location": None,
+            "direction": None,
+            "imageURL": IMAGE_URL.format(id=cam_id),
+            "pageURL": f"{BASE}/webcam/map/{cam_id}/full",
+            "coordinate": position["coordinate"],
+            "heading": position["heading"],
+            "listed": False,
+        })
+    return webcams
 
 
 def fetch_live_stream(page, page_path):
@@ -226,6 +275,7 @@ def fetch(lang):
     webcam_menu = nav_links(get(first_webcam_path), lang, "webcam")
     stream_menu = nav_links(get(first_stream_path), lang, "live-stream")
 
+    official = fetch_official_cameras()
     highways, webcams, live_streams = [], {}, {}
 
     for highway_id in webcam_menu:
@@ -251,13 +301,7 @@ def fetch(lang):
                 "liveStreamPage": f"{BASE}/{lang}/live-stream/{highway_id}.html",
             })
 
-    positions = fetch_camera_positions()
-    for cam in (cam for cams in webcams.values() for cam in cams):
-        cam.update(positions.get(cam["id"], {"coordinate": None, "heading": None}))
-    listed = {cam["id"] for cams in webcams.values() for cam in cams}
-    unlisted = sorted(set(positions) - listed)
-    if unlisted:
-        print(f"cameras.kml lists cameras on no webcam page: {unlisted}", file=sys.stderr)
+    webcams = merge_cameras(official, webcams)
 
     for highway_id in stream_menu:
         path = f"/{lang}/live-stream/{highway_id}.html"
@@ -277,17 +321,73 @@ def fetch(lang):
     }
 
 
+# Camera fields the catalog's editors set by hand, which --catalog keeps.
+KEPT_CAMERA_FIELDS = ["refreshInterval", "carriageways"]
+
+
+def catalog_camera(cam, existing):
+    """A catalog camera from a fetched one, keeping the hand-tuned fields of the existing entry."""
+    camera = {
+        "id": str(cam["id"]),
+        "place": cam["location"] or existing.get("place") or f"Caméra {cam['id']}",
+        "direction": cam["direction"] or existing.get("direction"),
+        "imageURL": cam["imageURL"],
+        "coordinate": cam["coordinate"],
+        "heading": cam["heading"],
+    }
+    camera.update({key: existing[key] for key in KEPT_CAMERA_FIELDS if key in existing})
+    if not cam["listed"]:
+        camera["isEnabled"] = False
+    elif "isEnabled" in existing:
+        camera["isEnabled"] = existing["isEnabled"]
+    return {key: value for key, value in camera.items() if value is not None}
+
+
+def update_catalog(path, data):
+    with open(path, encoding="utf-8") as f:
+        catalog = json.load(f)
+    motorways = {motorway["id"]: motorway for motorway in catalog["motorways"]}
+    for highway in data["highways"]:
+        motorway = motorways.get(highway["id"])
+        if motorway is None:
+            print(f"adding {highway['code']} to the catalog", file=sys.stderr)
+            motorway = {"id": highway["id"], "code": highway["code"], "name": highway["name"],
+                        "shortName": highway["code"], "cameras": []}
+            catalog["motorways"].append(motorway)
+            motorways[highway["id"]] = motorway
+        if highway["webcamPage"]:
+            motorway["website"] = highway["webcamPage"]
+        stream = data["liveStreams"].get(highway["id"])
+        if stream:
+            motorway["liveStream"] = {**motorway.get("liveStream", {}), "url": stream["url"]}
+    for highway_id, cams in data["webcams"].items():
+        motorway = motorways.get(highway_id)
+        if motorway is None:
+            print(f"no motorway {highway_id} in the catalog for cameras "
+                  f"{[cam['id'] for cam in cams]}", file=sys.stderr)
+            continue
+        existing = {camera["id"]: camera for camera in motorway["cameras"]}
+        motorway["cameras"] = [catalog_camera(cam, existing.get(str(cam["id"]), {})) for cam in cams]
+    catalog["updatedAt"] = data["fetchedAt"]
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--lang", choices=["fr", "de", "en"], default="fr")
     parser.add_argument("-o", "--output", help="write to this file instead of stdout")
+    parser.add_argument("--catalog", help="also update the cameras in this catalog.json")
     args = parser.parse_args()
 
-    data = json.dumps(fetch(args.lang), ensure_ascii=False, indent=2) + "\n"
+    result = fetch(args.lang)
+    if args.catalog:
+        update_catalog(args.catalog, result)
+    data = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:
             f.write(data)
-    else:
+    elif not args.catalog:
         sys.stdout.write(data)
 
 
