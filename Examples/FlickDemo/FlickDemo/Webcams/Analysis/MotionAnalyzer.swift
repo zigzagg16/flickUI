@@ -177,6 +177,38 @@ actor MotionAnalyzer {
         return MotionReading(left: min(movement.left / peak, 1), right: min(movement.right / peak, 1))
     }
 
+    /// The mean flow magnitude of each half of the picture, in pixels.
+    private static func meanMovement(in flow: CVPixelBuffer) -> (left: Double, right: Double)? {
+        CVPixelBufferLockBaseAddress(flow, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(flow, .readOnly) }
+        guard let base = CVPixelBufferGetBaseAddress(flow) else { return nil }
+        let width = CVPixelBufferGetWidth(flow)
+        let height = CVPixelBufferGetHeight(flow)
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(flow)
+        var sums = (left: 0.0, right: 0.0)
+        var counts = (left: 0.0, right: 0.0)
+        // Every other pixel is plenty.
+        for y in stride(from: 0, to: height, by: 2) {
+            let row = (base + y * bytesPerRow).assumingMemoryBound(to: Float32.self)
+            for x in stride(from: 0, to: width, by: 2) {
+                let dx = row[2 * x]
+                let dy = row[2 * x + 1]
+                var magnitude = (dx * dx + dy * dy).squareRoot()
+                if magnitude < noise { magnitude = 0 }
+                if x < width / 2 {
+                    sums.left += Double(magnitude)
+                    counts.left += 1
+                } else {
+                    sums.right += Double(magnitude)
+                    counts.right += 1
+                }
+            }
+        }
+        guard counts.left > 0, counts.right > 0 else { return nil }
+        // Scaled up: most of the picture is road side and sky, which doesn't move.
+        return (left: sums.left / counts.left * 10, right: sums.right / counts.right * 10)
+    }
+
     // MARK: Cuts
 
     /// The brightness of a 32 × 18 grid of points of a BGRA frame.
