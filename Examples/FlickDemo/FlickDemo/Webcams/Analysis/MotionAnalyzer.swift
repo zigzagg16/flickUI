@@ -41,7 +41,7 @@ struct MotionReading: Equatable, Sendable {
 /// The camera a live stream shows, read from the picture: streams cycle through
 /// several cameras, each with its label and caption burnt in.
 struct LiveCamera: Equatable, Sendable {
-    /// The identifier in the box at the top left, such as "A6 WG 00.7".
+    /// The identifier in the box in a top corner, such as "A6 WG 00.7".
     var label: String
     /// The caption at the bottom, such as "Croix de Cessange: direction Croix de Gasperich".
     var caption: String?
@@ -173,15 +173,29 @@ actor MotionAnalyzer {
 
     // MARK: Camera label
 
-    /// The camera label at the top left and the caption at the bottom, read with Vision.
+    /// The camera label and the caption, read with Vision.
+    ///
+    /// The label sits in a corner of the top strip, left or right depending on the
+    /// camera, among other text such as gantry signs: only text shaped like a label is
+    /// taken. The caption is the bottom line that reads "Place: direction …".
     private static func readCamera(in buffer: CVPixelBuffer) -> LiveCamera? {
-        let label = textRequest(in: CGRect(x: 0, y: 0.82, width: 0.4, height: 0.18))
-        let caption = textRequest(in: CGRect(x: 0, y: 0, width: 1, height: 0.14))
+        let top = textRequest(in: CGRect(x: 0, y: 0.82, width: 1, height: 0.18))
+        let bottom = textRequest(in: CGRect(x: 0, y: 0, width: 1, height: 0.16))
         let handler = VNImageRequestHandler(cvPixelBuffer: buffer, options: [:])
-        guard (try? handler.perform([label, caption])) != nil,
-              let labelText = text(of: label).map(normalized), !labelText.isEmpty
+        guard (try? handler.perform([top, bottom])) != nil,
+              let label = lines(of: top).lazy.compactMap { cameraLabel(in: $0) }.first
         else { return nil }
-        return LiveCamera(label: labelText, caption: text(of: caption))
+        let caption = lines(of: bottom).first { $0.contains(":") || $0.localizedCaseInsensitiveContains("direction") }
+        return LiveCamera(label: label, caption: caption)
+    }
+
+    /// The label in a line of text, such as "A6 WG 13.0": a road number, a short code
+    /// and a distance, upper-cased with single spaces so it reads the same every time.
+    static func cameraLabel(in line: String) -> String? {
+        let pattern = #/(?i)\b([AB]\s?\d{1,2})\s+([A-Z0-9]{1,4})\s+(\d{1,3}[.,]\d)\b/#
+        guard let match = line.firstMatch(of: pattern) else { return nil }
+        let road = match.1.uppercased().replacingOccurrences(of: " ", with: "")
+        return "\(road) \(match.2.uppercased()) \(match.3.replacingOccurrences(of: ",", with: "."))"
     }
 
     /// Reads text in a region, in Vision's coordinates (origin at the bottom left).
@@ -193,45 +207,7 @@ actor MotionAnalyzer {
         return request
     }
 
-    private static func text(of request: VNRecognizeTextRequest) -> String? {
-        let lines = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }
-        return lines.isEmpty ? nil : lines.joined(separator: " ")
-    }
-
-    /// Upper case with single spaces, so the same label reads the same every time.
-    private static func normalized(_ label: String) -> String {
-        label.uppercased().split(whereSeparator: \.isWhitespace).joined(separator: " ")
-    }
-
-    /// The mean flow magnitude of each half of the picture, in pixels.
-    private static func meanMovement(in flow: CVPixelBuffer) -> (left: Double, right: Double)? {
-        CVPixelBufferLockBaseAddress(flow, .readOnly)
-        defer { CVPixelBufferUnlockBaseAddress(flow, .readOnly) }
-        guard let base = CVPixelBufferGetBaseAddress(flow) else { return nil }
-        let width = CVPixelBufferGetWidth(flow)
-        let height = CVPixelBufferGetHeight(flow)
-        let bytesPerRow = CVPixelBufferGetBytesPerRow(flow)
-        var sums = (left: 0.0, right: 0.0)
-        var counts = (left: 0.0, right: 0.0)
-        // Every other pixel is plenty.
-        for y in stride(from: 0, to: height, by: 2) {
-            let row = (base + y * bytesPerRow).assumingMemoryBound(to: Float32.self)
-            for x in stride(from: 0, to: width, by: 2) {
-                let dx = row[2 * x]
-                let dy = row[2 * x + 1]
-                var magnitude = (dx * dx + dy * dy).squareRoot()
-                if magnitude < noise { magnitude = 0 }
-                if x < width / 2 {
-                    sums.left += Double(magnitude)
-                    counts.left += 1
-                } else {
-                    sums.right += Double(magnitude)
-                    counts.right += 1
-                }
-            }
-        }
-        guard counts.left > 0, counts.right > 0 else { return nil }
-        // Scaled up: most of the picture is road side and sky, which doesn't move.
-        return (left: sums.left / counts.left * 10, right: sums.right / counts.right * 10)
+    private static func lines(of request: VNRecognizeTextRequest) -> [String] {
+        (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }
     }
 }
