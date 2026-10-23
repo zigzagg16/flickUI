@@ -6,7 +6,7 @@ import Vision
 /// Finds vehicles in a picture with a Core ML object detector run through Vision.
 ///
 /// The model is an object detector trained on the COCO classes, which include cars,
-/// trucks, buses and motorbikes, such as Apple's YOLOv3 Tiny. It is downloaded from
+/// trucks, buses and motorbikes, such as Apple's YOLOv3. It is downloaded from
 /// the catalog's `vehicleModelURL` and compiled on the device the first time vehicle
 /// detection is turned on, rather than shipped in the repository. A model named
 /// `VehicleDetector` added to the app target is used instead when present.
@@ -26,41 +26,90 @@ final class VehicleDetector {
         }
     }
 
-    private var model: VNCoreMLModel?
+    /// The loaded model, and the file it was loaded from.
+    private var model: (url: URL, model: VNCoreMLModel)?
 
     // MARK: Installing
+
+    /// A model the app can use, and where it comes from.
+    struct InstalledModel: Equatable, Sendable {
+        /// The model's name, such as "YOLOv3FP16".
+        var name: String
+        /// The size of the compiled model on the device.
+        var bytes: Int64
+        /// Added to the app target rather than downloaded.
+        var isBundled: Bool
+    }
 
     /// A model added to the app target, which Xcode compiles.
     private static var bundledURL: URL? {
         Bundle.main.url(forResource: "VehicleDetector", withExtension: "mlmodelc")
     }
 
-    private static var installedURL: URL {
-        URL.applicationSupportDirectory.appending(path: "VehicleDetector.mlmodelc")
+    /// Downloaded models, one at a time, named after the file they came from.
+    private static var modelsDirectory: URL {
+        URL.applicationSupportDirectory.appending(path: "VehicleModels", directoryHint: .isDirectory)
     }
 
-    static var isInstalled: Bool {
-        bundledURL != nil || FileManager.default.fileExists(atPath: installedURL.path(percentEncoded: false))
+    /// Where the model downloaded from a URL is kept: a new URL in the catalog means a
+    /// new model, rather than keeping the one downloaded before.
+    private static func installedURL(for modelURL: URL) -> URL {
+        modelsDirectory.appending(path: modelURL.deletingPathExtension().lastPathComponent + ".mlmodelc")
     }
 
-    /// Downloads and compiles the model, unless it is already there.
-    static func install(from modelURL: URL?) async throws {
-        guard !isInstalled else { return }
+    /// The model in use: the bundled one, or the one downloaded from `modelURL`.
+    static func modelFile(for modelURL: URL?) -> URL? {
+        if let bundledURL { return bundledURL }
+        guard let modelURL else { return nil }
+        let url = installedURL(for: modelURL)
+        return FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) ? url : nil
+    }
+
+    static func installedModel(for modelURL: URL?) -> InstalledModel? {
+        guard let file = modelFile(for: modelURL) else { return nil }
+        return InstalledModel(
+            name: file.deletingPathExtension().lastPathComponent,
+            bytes: Self.size(of: file),
+            isBundled: file == bundledURL
+        )
+    }
+
+    /// Downloads and compiles the model, unless it is already there, and removes any
+    /// other downloaded model. Reports the download's progress, from 0 to 1.
+    static func install(from modelURL: URL?, progress: @escaping @Sendable (Double) -> Void = { _ in }) async throws {
+        guard modelFile(for: modelURL) == nil else { return }
         guard let modelURL else { throw InstallError.noModel }
-        let (downloaded, response) = try await URLSession.shared.download(from: modelURL)
+        let observer = DownloadObserver(onProgress: progress)
+        let (downloaded, response) = try await URLSession.shared.download(from: modelURL, delegate: observer)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             throw InstallError.download
         }
         let fileManager = FileManager.default
         // Core ML compiles a file by its extension.
-        let source = fileManager.temporaryDirectory.appending(path: "VehicleDetector.mlmodel")
+        let source = fileManager.temporaryDirectory.appending(path: modelURL.lastPathComponent)
         try? fileManager.removeItem(at: source)
         try fileManager.moveItem(at: downloaded, to: source)
+        defer { try? fileManager.removeItem(at: source) }
         let compiled = try await MLModel.compileModel(at: source)
-        try fileManager.createDirectory(at: .applicationSupportDirectory, withIntermediateDirectories: true)
-        try? fileManager.removeItem(at: installedURL)
-        try fileManager.moveItem(at: compiled, to: installedURL)
-        try? fileManager.removeItem(at: source)
+        removeDownloadedModels()
+        try fileManager.createDirectory(at: modelsDirectory, withIntermediateDirectories: true)
+        try fileManager.moveItem(at: compiled, to: installedURL(for: modelURL))
+    }
+
+    /// Deletes downloaded models, including one kept by an earlier version of the app.
+    static func removeDownloadedModels() {
+        let fileManager = FileManager.default
+        try? fileManager.removeItem(at: modelsDirectory)
+        try? fileManager.removeItem(at: URL.applicationSupportDirectory.appending(path: "VehicleDetector.mlmodelc"))
+    }
+
+    private static func size(of directory: URL) -> Int64 {
+        let files = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: [.fileSizeKey])
+        var total: Int64 = 0
+        while let file = files?.nextObject() as? URL {
+            total += Int64((try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+        }
+        return total
     }
 
     // MARK: Detecting
@@ -74,12 +123,12 @@ final class VehicleDetector {
 
     /// The vehicles' boxes, normalised with the origin at the top left.
     ///
-    /// The model sees a small square, 416 × 416 for YOLOv3 Tiny, so in a whole camera
+    /// The model sees a small square, 416 × 416 for YOLOv3, so in a whole camera
     /// picture distant vehicles are a few pixels and go unseen. The picture is also
     /// looked at in overlapping tiles, each scaled up to the model's size, and the
     /// detections are merged.
-    func vehicles(in image: CGImage) throws -> [CGRect] {
-        let model = try loadedModel()
+    func vehicles(in image: CGImage, modelFile: URL) throws -> [CGRect] {
+        let model = try loadedModel(from: modelFile)
         var detections: [Detection] = []
         for tile in Self.tiles {
             guard let crop = tile == Self.fullImage ? image : image.cropping(to: Self.pixels(of: tile, in: image)) else { continue }
@@ -148,13 +197,26 @@ final class VehicleDetector {
         return kept
     }
 
-    private func loadedModel() throws -> VNCoreMLModel {
-        if let model { return model }
-        guard let url = Self.bundledURL ?? (Self.isInstalled ? Self.installedURL : nil) else {
-            throw CocoaError(.fileNoSuchFile)
-        }
-        let loaded = try VNCoreMLModel(for: MLModel(contentsOf: url, configuration: MLModelConfiguration()))
-        model = loaded
+    private func loadedModel(from file: URL) throws -> VNCoreMLModel {
+        if let model, model.url == file { return model.model }
+        let loaded = try VNCoreMLModel(for: MLModel(contentsOf: file, configuration: MLModelConfiguration()))
+        model = (file, loaded)
         return loaded
+    }
+}
+
+/// Reports a download's progress, from the task the download creates.
+private final class DownloadObserver: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    private let onProgress: @Sendable (Double) -> Void
+    private var observation: NSKeyValueObservation?
+
+    init(onProgress: @escaping @Sendable (Double) -> Void) {
+        self.onProgress = onProgress
+    }
+
+    func urlSession(_ session: URLSession, didCreateTask task: URLSessionTask) {
+        observation = task.progress.observe(\.fractionCompleted) { [onProgress] progress, _ in
+            onProgress(progress.fractionCompleted)
+        }
     }
 }

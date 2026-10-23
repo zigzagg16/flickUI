@@ -255,9 +255,31 @@ struct WebcamScreen: View {
 
     private var detectsVehicles: Binding<Bool> {
         Binding {
-            monitor.detectsVehicles || monitor.detector == .downloading
+            monitor.detectsVehicles || monitor.isDownloadingModel
         } set: { isOn in
             Task { await monitor.setDetectsVehicles(isOn) }
+        }
+    }
+
+    /// The vehicle model's state: its name and size once on the device.
+    private var modelStatus: String {
+        switch monitor.detector {
+        case let .downloading(fraction):
+            return "Downloading… \(fraction.formatted(.percent.precision(.fractionLength(0))))"
+        case let .failed(message):
+            return message
+        case .off, .on:
+            guard let model = monitor.installedModel else { return "Not downloaded" }
+            let size = model.bytes.formatted(.byteCount(style: .file))
+            return "\(model.name) · \(size) · \(model.isBundled ? "In the app" : "Downloaded")"
+        }
+    }
+
+    private var modelStatusSymbol: String {
+        switch monitor.detector {
+        case .downloading: "arrow.down.circle"
+        case .failed: "exclamationmark.triangle"
+        case .off, .on: monitor.installedModel == nil ? "icloud.and.arrow.down" : "checkmark.circle"
         }
     }
 
@@ -296,9 +318,13 @@ struct WebcamScreen: View {
                         .accessibilityHint(error)
                 }
                 switch monitor.detector {
-                case .downloading:
-                    Label("Downloading the vehicle model…", systemImage: "arrow.down.circle")
-                        .font(.footnote)
+                case let .downloading(fraction):
+                    Label {
+                        Text("Downloading the vehicle model… \(fraction, format: .percent.precision(.fractionLength(0)))")
+                    } icon: {
+                        Image(systemName: "arrow.down.circle")
+                    }
+                    .font(.footnote)
                 case let .failed(message):
                     Label(message, systemImage: "exclamationmark.triangle.fill")
                         .font(.footnote)
@@ -313,6 +339,14 @@ struct WebcamScreen: View {
                     Toggle("Show Detections", systemImage: "rectangle.dashed", isOn: $showsVehicles)
                         .disabled(!monitor.detectsVehicles)
                     Toggle("Live Stream Motion", systemImage: "wind", isOn: $analyzesLiveMotion)
+                }
+                Section("Vehicle Model") {
+                    Label(modelStatus, systemImage: modelStatusSymbol)
+                    if let model = monitor.installedModel, !model.isBundled {
+                        Button("Delete Model", systemImage: "trash", role: .destructive) {
+                            monitor.deleteModel()
+                        }
+                    }
                 }
                 Picker("Menu Background", systemImage: "paintbrush.fill", selection: $background) {
                     ForEach(BackgroundChoice.allCases) { Text($0.title).tag($0) }

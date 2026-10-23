@@ -25,7 +25,8 @@ actor RoadAnalyzer {
     private let detector = VehicleDetector()
 
     /// Analyzes a picture of a camera. `nil` if it can't be decoded.
-    func analyze(_ data: Data, camera id: String, detectsVehicles: Bool, at date: Date = .now) -> RoadReport? {
+    /// - Parameter vehicleModel: The vehicle detection model to use, or `nil` not to detect vehicles.
+    func analyze(_ data: Data, camera id: String, vehicleModel: URL?, at date: Date = .now) -> RoadReport? {
         guard let image = Self.image(from: data), let statistics = ImageStatistics(image: image) else { return nil }
 
         var memory = memories[id] ?? CameraMemory()
@@ -45,11 +46,11 @@ actor RoadAnalyzer {
         if report.weather.contains(.fog), report.visibility == .good {
             report.visibility = .reduced
         }
-        if detectsVehicles, VehicleDetector.isInstalled {
+        if let vehicleModel {
             // The same picture again says nothing new about movement.
             let estimate = memory.repeats > 0
                 ? memory.lastEstimate
-                : (try? detector.vehicles(in: image)).map { memory.traffic.update(with: $0) }
+                : (try? detector.vehicles(in: image, modelFile: vehicleModel)).map { memory.traffic.update(with: $0) }
             memory.lastEstimate = estimate
             memories[id] = memory
             if let estimate {

@@ -7,21 +7,44 @@ import Observation
 final class RoadMonitor {
     enum DetectorState: Equatable {
         case off
-        case downloading
+        /// Downloading the model, from 0 to 1.
+        case downloading(Double)
         case on
         case failed(String)
     }
 
     private(set) var reports: [String: RoadReport] = [:]
     private(set) var detector = DetectorState.off
-    /// Where to download the vehicle detection model, from the catalog.
-    var vehicleModelURL: URL?
+    /// The vehicle detection model on the device, if any.
+    private(set) var installedModel: VehicleDetector.InstalledModel?
+
+    /// Where to download the vehicle detection model, from the catalog. A new URL
+    /// replaces the model, downloading the new one if detection is on.
+    var vehicleModelURL: URL? {
+        didSet {
+            guard vehicleModelURL != oldValue else { return }
+            installedModel = VehicleDetector.installedModel(for: vehicleModelURL)
+            if detector == .on, installedModel == nil {
+                detector = .off
+                Task { await setDetectsVehicles(true) }
+            }
+        }
+    }
 
     var detectsVehicles: Bool {
         detector == .on
     }
 
+    var isDownloadingModel: Bool {
+        if case .downloading = detector { return true }
+        return false
+    }
+
     private static let detectsVehiclesKey = "detectsVehicles"
+
+    init() {
+        installedModel = VehicleDetector.installedModel(for: nil)
+    }
 
     /// Turns vehicle detection on, downloading its model the first time, or off.
     /// The choice is remembered.
@@ -31,14 +54,28 @@ final class RoadMonitor {
             detector = .off
             return
         }
-        guard detector != .on, detector != .downloading else { return }
-        detector = .downloading
+        guard detector != .on, !isDownloadingModel else { return }
+        detector = .downloading(0)
         do {
-            try await VehicleDetector.install(from: vehicleModelURL)
+            try await VehicleDetector.install(from: vehicleModelURL) { fraction in
+                Task { @MainActor [weak self] in
+                    guard let self, self.isDownloadingModel else { return }
+                    self.detector = .downloading(fraction)
+                }
+            }
+            installedModel = VehicleDetector.installedModel(for: vehicleModelURL)
             detector = .on
         } catch {
             detector = .failed(error.localizedDescription)
         }
+    }
+
+    /// Deletes the downloaded model to free its space, and turns detection off.
+    func deleteModel() {
+        VehicleDetector.removeDownloadedModels()
+        UserDefaults.standard.set(false, forKey: Self.detectsVehiclesKey)
+        detector = .off
+        installedModel = VehicleDetector.installedModel(for: vehicleModelURL)
     }
 
     /// Restores the remembered choice.
@@ -57,7 +94,8 @@ final class RoadMonitor {
 
     /// Analyzes a picture the app just loaded.
     func record(_ data: Data, for camera: Webcam) async {
-        if let report = await RoadAnalyzer.shared.analyze(data, camera: camera.id, detectsVehicles: detectsVehicles) {
+        let vehicleModel = detectsVehicles ? VehicleDetector.modelFile(for: vehicleModelURL) : nil
+        if let report = await RoadAnalyzer.shared.analyze(data, camera: camera.id, vehicleModel: vehicleModel) {
             store(report, for: camera)
         }
     }

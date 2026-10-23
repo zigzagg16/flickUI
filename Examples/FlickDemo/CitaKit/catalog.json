@@ -9,7 +9,7 @@
   "settings": {
     "catalogMaxAge": 86400,
     "imageRefreshInterval": 30,
-    "vehicleModelURL": "https://ml-assets.apple.com/coreml/models/Image/ObjectDetection/YOLOv3Tiny/YOLOv3TinyFP16.mlmodel"
+    "vehicleModelURL": "https://ml-assets.apple.com/coreml/models/Image/ObjectDetection/YOLOv3/YOLOv3FP16.mlmodel"
   },
   "motorways": [
     {

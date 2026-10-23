@@ -136,7 +136,7 @@ it opens the camera in the app. Widgets can't play video, so there's no live str
 
 The Webcams app also reads the road from the pictures, on the device: frozen or
 missing cameras, day or night, visibility and weather (Vision), vehicles (a Core ML
-YOLOv3 Tiny model, downloaded on first use), the traffic level per carriageway from
+YOLOv3 model, 124 MB, downloaded on first use and shown in the options menu), the traffic level per carriageway from
 successive pictures, and the live stream's movement (Vision optical flow). Each
 camera's situation shows as its symbol in the side menu, in the header and on the
 widget, which shares the app's reports through the `group.dev.flickui.FlickDemo`
