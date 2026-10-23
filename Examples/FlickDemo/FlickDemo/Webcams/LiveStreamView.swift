@@ -12,6 +12,16 @@ struct LiveStreamView: View {
     @State private var isPlaying = false
     @State private var failed = false
     @State private var attempt = 0
+    /// Small frames for motion analysis, alongside what the player shows.
+    @State private var videoOutput: AVPlayerItemVideoOutput?
+    @State private var motionAnalyzer = MotionAnalyzer()
+    @State private var motion: MotionReading?
+    @AppStorage("analyzesLiveMotion") private var analyzesMotion = true
+
+    /// The time between the two frames compared: short enough for optical flow to
+    /// follow a vehicle from one to the other.
+    private static let frameGap = Duration.milliseconds(200)
+    private static let motionInterval = Duration.seconds(2)
 
     var body: some View {
         PlayerLayerView(player: player)
@@ -39,6 +49,12 @@ struct LiveStreamView: View {
                 .accessibilityLabel(isMuted ? "Unmute" : "Mute")
                 .padding()
             }
+            .overlay(alignment: .bottomTrailing) {
+                if let motion, isPlaying, !failed {
+                    MotionBadge(reading: motion)
+                        .padding()
+                }
+            }
             .onChange(of: isMuted, initial: true) { _, muted in
                 player.isMuted = muted
             }
@@ -47,6 +63,9 @@ struct LiveStreamView: View {
             }
             .task(id: "\(motorway.id)-\(attempt)") {
                 await play()
+            }
+            .task(id: "\(motorway.id)-\(attempt)-\(analyzesMotion)") {
+                await measureMotion()
             }
             .onDisappear {
                 player.pause()
@@ -59,11 +78,68 @@ struct LiveStreamView: View {
         let url = await CitaWebcams.liveStream(for: motorway)
         guard !Task.isCancelled else { return }
         let item = AVPlayerItem(url: url)
+        let output = AVPlayerItemVideoOutput(pixelBufferAttributes: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+            kCVPixelBufferWidthKey as String: 320,
+            kCVPixelBufferHeightKey as String: 180
+        ])
+        item.add(output)
+        videoOutput = output
         player.replaceCurrentItem(with: item)
         player.play()
         for await status in item.publisher(for: \.status).values where status == .failed {
             failed = true
             break
+        }
+    }
+
+    /// Compares two frames a moment apart every few seconds while the stream plays.
+    private func measureMotion() async {
+        motion = nil
+        guard analyzesMotion else { return }
+        while !Task.isCancelled {
+            try? await Task.sleep(for: Self.motionInterval)
+            guard isPlaying, let first = currentFrame() else { continue }
+            try? await Task.sleep(for: Self.frameGap)
+            guard let second = currentFrame() else { continue }
+            if let reading = await motionAnalyzer.motion(from: first, to: second), !Task.isCancelled {
+                withAnimation(.smooth) { motion = reading }
+            }
+        }
+    }
+
+    private func currentFrame() -> VideoFrame? {
+        videoOutput?
+            .copyPixelBuffer(forItemTime: player.currentTime(), itemTimeForDisplay: nil)
+            .map(VideoFrame.init)
+    }
+}
+
+/// The movement on each carriageway of the live stream.
+struct MotionBadge: View {
+    let reading: MotionReading
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            side("Left", reading.left)
+            side("Right", reading.right)
+        }
+        .font(.caption.weight(.semibold))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+
+    private func side(_ name: String, _ value: Double) -> some View {
+        HStack(spacing: 6) {
+            Text("\(name): \(MotionReading.level(value).title)")
+            Gauge(value: value) {
+                EmptyView()
+            }
+            .gaugeStyle(.accessoryLinearCapacity)
+            .tint(value < 0.15 ? .red : value < 0.5 ? .orange : .green)
+            .frame(width: 44)
         }
     }
 }

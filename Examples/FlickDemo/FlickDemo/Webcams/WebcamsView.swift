@@ -170,6 +170,7 @@ struct WebcamScreen: View {
     let retry: () -> Void
     @Environment(RoadMonitor.self) private var monitor
     @AppStorage(showsVehiclesKey) private var showsVehicles = true
+    @AppStorage("analyzesLiveMotion") private var analyzesLiveMotion = true
 
     var body: some View {
         ZStack {
@@ -254,6 +255,7 @@ struct WebcamScreen: View {
                     Toggle("Detect Vehicles", systemImage: "car.fill", isOn: detectsVehicles)
                     Toggle("Show Detections", systemImage: "rectangle.dashed", isOn: $showsVehicles)
                         .disabled(!monitor.detectsVehicles)
+                    Toggle("Live Stream Motion", systemImage: "wind", isOn: $analyzesLiveMotion)
                 }
                 Picker("Menu Background", systemImage: "paintbrush.fill", selection: $background) {
                     ForEach(BackgroundChoice.allCases) { Text($0.title).tag($0) }
