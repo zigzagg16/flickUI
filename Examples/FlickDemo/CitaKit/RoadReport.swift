@@ -70,7 +70,14 @@ struct RoadReport: Codable, Hashable, Sendable {
         case .live: break
         }
         var parts: [String] = []
-        if let traffic { parts.append(traffic.title) }
+        if let traffic {
+            // Name the jammed or dense side when the two carriageways differ.
+            if let leftTraffic, let rightTraffic, leftTraffic != rightTraffic {
+                parts.append("Left \(leftTraffic.title.lowercased()), right \(rightTraffic.title.lowercased())")
+            } else {
+                parts.append(traffic.title)
+            }
+        }
         if let vehicles { parts.append(vehicles == 1 ? "1 vehicle" : "\(vehicles) vehicles") }
         parts += Weather.allCases.filter(weather.contains).map(\.title)
         if visibility != .good { parts.append(visibility.title) }

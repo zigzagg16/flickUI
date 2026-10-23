@@ -13,6 +13,8 @@ actor RoadAnalyzer {
         var lastImage: Data?
         /// How many pictures in a row were identical to the one before.
         var repeats = 0
+        var traffic = TrafficEstimator()
+        var lastEstimate: TrafficEstimator.Estimate?
     }
 
     /// Identical pictures in a row before a camera counts as frozen. cita.lu updates
@@ -43,9 +45,20 @@ actor RoadAnalyzer {
         if report.weather.contains(.fog), report.visibility == .good {
             report.visibility = .reduced
         }
-        if detectsVehicles, VehicleDetector.isInstalled, let boxes = try? detector.vehicles(in: image) {
-            report.vehicles = boxes.count
-            report.vehicleBoxes = boxes
+        if detectsVehicles, VehicleDetector.isInstalled {
+            // The same picture again says nothing new about movement.
+            let estimate = memory.repeats > 0
+                ? memory.lastEstimate
+                : (try? detector.vehicles(in: image)).map { memory.traffic.update(with: $0) }
+            memory.lastEstimate = estimate
+            memories[id] = memory
+            if let estimate {
+                report.vehicles = estimate.vehicles.count
+                report.vehicleBoxes = estimate.vehicles
+                report.traffic = estimate.traffic
+                report.leftTraffic = estimate.left
+                report.rightTraffic = estimate.right
+            }
         }
         return report
     }
