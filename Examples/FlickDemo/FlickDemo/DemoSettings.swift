@@ -52,8 +52,24 @@ enum RowChoice: String, CaseIterable, Identifiable {
 }
 
 enum BackgroundChoice: String, CaseIterable, Identifiable {
-    case material, gradient, dim, clear
+    case material, gradient, dim, clear, panel, glassPanel, tintedPanel, drawer, halo
     var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .glassPanel: "Glass panel"
+        case .tintedPanel: "Tinted panel"
+        default: rawValue.capitalized
+        }
+    }
+
+    /// Whether it holds the rows rather than covering the screen.
+    var isContained: Bool {
+        switch self {
+        case .material, .gradient, .dim, .clear: false
+        case .panel, .glassPanel, .tintedPanel, .drawer, .halo: true
+        }
+    }
 }
 
 enum PhysicsChoice: String, CaseIterable, Identifiable {
@@ -177,7 +193,16 @@ struct DemoBackgroundStyle: FlickMenuBackgroundStyle {
         case .gradient: FlickGradientBackgroundStyle().contentColorScheme
         case .dim: FlickColorBackgroundStyle(.black.opacity(0.45)).contentColorScheme
         case .clear: FlickColorBackgroundStyle(.clear).contentColorScheme
+        case .panel: FlickPanelBackgroundStyle.panel.contentColorScheme
+        case .glassPanel: FlickPanelBackgroundStyle.glassPanel.contentColorScheme
+        case .tintedPanel: Self.tintedPanel.contentColorScheme
+        case .drawer: FlickPanelBackgroundStyle.drawer.contentColorScheme
+        case .halo: FlickHaloBackgroundStyle.halo.contentColorScheme
         }
+    }
+
+    private static var tintedPanel: FlickPanelBackgroundStyle {
+        .panel(.color(.indigo.opacity(0.85)), scrim: 0.25)
     }
 
     @ViewBuilder
@@ -187,6 +212,11 @@ struct DemoBackgroundStyle: FlickMenuBackgroundStyle {
         case .gradient: FlickGradientBackgroundStyle().makeBody(configuration: configuration)
         case .dim: FlickColorBackgroundStyle(.black.opacity(0.45)).makeBody(configuration: configuration)
         case .clear: FlickColorBackgroundStyle(.clear).makeBody(configuration: configuration)
+        case .panel: FlickPanelBackgroundStyle.panel.makeBody(configuration: configuration)
+        case .glassPanel: FlickPanelBackgroundStyle.glassPanel.makeBody(configuration: configuration)
+        case .tintedPanel: Self.tintedPanel.makeBody(configuration: configuration)
+        case .drawer: FlickPanelBackgroundStyle.drawer.makeBody(configuration: configuration)
+        case .halo: FlickHaloBackgroundStyle.halo.makeBody(configuration: configuration)
         }
     }
 }

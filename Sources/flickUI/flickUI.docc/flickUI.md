@@ -68,6 +68,11 @@ struct ContentView: View {
 - ``FlickMaterialBackgroundStyle``
 - ``FlickGradientBackgroundStyle``
 - ``FlickColorBackgroundStyle``
+- ``FlickPanelBackgroundStyle``
+- ``FlickPanelFill``
+- ``FlickPanelExtent``
+- ``FlickPanelGeometry``
+- ``FlickHaloBackgroundStyle``
 
 ### Behaviour
 

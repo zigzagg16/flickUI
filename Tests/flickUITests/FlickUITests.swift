@@ -21,6 +21,14 @@ struct FlickContentColorSchemeTests {
         #expect(AnyFlickMenuBackgroundStyle(FlickColorBackgroundStyle(.black, contentColorScheme: .light)).contentColorScheme == .light)
         #expect(AnyFlickMenuBackgroundStyle(FlickMaterialBackgroundStyle()).contentColorScheme == nil)
     }
+
+    @Test @MainActor func containedBackgrounds() {
+        #expect(FlickPanelBackgroundStyle.panel.contentColorScheme == nil)
+        #expect(FlickPanelBackgroundStyle.glassPanel.contentColorScheme == nil)
+        #expect(FlickPanelBackgroundStyle.drawer(.color(.black)).contentColorScheme == .dark)
+        #expect(FlickPanelBackgroundStyle(.color(.white), contentColorScheme: .dark).contentColorScheme == .dark)
+        #expect(FlickHaloBackgroundStyle.halo.contentColorScheme == .dark)
+    }
 }
 
 @Suite("Events and actions")

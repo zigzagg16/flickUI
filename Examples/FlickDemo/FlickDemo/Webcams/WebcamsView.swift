@@ -31,13 +31,15 @@ enum WebcamFeed: Identifiable, Hashable {
     }
 }
 
-/// Live motorway webcams from cita.lu. Two nested menus: the side edges switch
-/// between the live stream and the cameras, the top and bottom edges switch motorways.
+/// Live motorway webcams from cita.lu. Two nested menus, one per side: the right
+/// edge switches between the live stream and the cameras, the left edge switches motorways.
 struct WebcamsView: View {
     @State private var motorway = Motorway.a13.id
     @State private var feedID = WebcamFeed.liveID
     @State private var pages: [Motorway: WebcamPage] = [:]
     @State private var loadError: String?
+    /// Contained by default, so the camera stays visible around the menu.
+    @State private var background = BackgroundChoice.panel
 
     private var current: Motorway {
         Motorway(rawValue: motorway) ?? .a13
@@ -62,17 +64,17 @@ struct WebcamsView: View {
             title: pages[current]?.title ?? current.title,
             feed: feed,
             position: cameraPosition,
-            error: loadError
+            error: loadError,
+            background: $background
         ) {
             Task { await load(current) }
         }
-        .flickMenu(feeds, selection: $feedID, edges: .horizontal, title: \.title, systemImage: \.symbol)
+        .flickMenu(feeds, selection: $feedID, edges: .trailing, title: \.title, systemImage: \.symbol)
         .flickMenuHome(.trailing, position: 0.4)
-        .flickMenu(Motorway.allCases, selection: $motorway, edges: .vertical, title: \.title, systemImage: \.symbol)
-        .flickMenuHome(.bottom)
-        .flickMenuIndicatorStyle(.morphing(.liquid, tint: .yellow), edges: .vertical)
-        .flickMenuRowStyle(.magnifying(.dock), edges: .vertical)
-        .flickMenuBackground(.gradient, edges: .vertical)
+        .flickMenu(Motorway.allCases, selection: $motorway, edges: .leading, title: \.title, systemImage: \.symbol)
+        .flickMenuHome(.leading, position: 0.4)
+        .flickMenuIndicatorStyle(.morphing(.liquid, tint: .yellow), edges: .leading)
+        .flickMenuBackground(DemoBackgroundStyle(choice: background))
         .onChange(of: motorway) {
             // Stay on the live stream; otherwise start at the new motorway's first camera.
             if feedID != WebcamFeed.liveID {
@@ -113,6 +115,7 @@ struct WebcamScreen: View {
     let feed: WebcamFeed
     let position: (index: Int, count: Int)?
     let error: String?
+    @Binding var background: BackgroundChoice
     let retry: () -> Void
 
     var body: some View {
@@ -159,6 +162,16 @@ struct WebcamScreen: View {
                 }
             }
             Spacer()
+            Menu {
+                Picker("Menu background", selection: $background) {
+                    ForEach(BackgroundChoice.allCases) { Text($0.title).tag($0) }
+                }
+            } label: {
+                Label("Menu background", systemImage: "paintbrush.fill")
+                    .labelStyle(.iconOnly)
+                    .padding(6)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
             if feed == .live {
                 Text("LIVE")
                     .font(.footnote.bold())

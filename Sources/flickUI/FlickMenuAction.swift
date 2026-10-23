@@ -1,5 +1,6 @@
 #if canImport(UIKit)
 import FlickCore
+import Observation
 import SwiftUI
 
 /// Opens and closes a menu from code: a button, a keyboard shortcut or a gesture of
@@ -53,5 +54,18 @@ final class FlickMenuController {
     }
 
     var perform: @MainActor (Command) -> Void = { _ in }
+}
+
+/// Lets a menu know when a menu nested in its content is open, so it can hide its
+/// indicator, which would otherwise sit on top of the nested menu's rows.
+@MainActor @Observable
+final class FlickMenuNesting {
+    var isNestedMenuOpen = false
+}
+
+extension EnvironmentValues {
+    /// The nesting state of the enclosing menu, if any.
+    // swiftlint:disable:next redundant_optional_initialization
+    @Entry var flickMenuParent: FlickMenuNesting? = nil
 }
 #endif

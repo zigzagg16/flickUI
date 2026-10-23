@@ -61,4 +61,7 @@ chosen, and when it is dismissed. Several handlers can be attached; all are call
 outermost first.
 
 A menu nested in another menu's content inherits its styles and behaviour, but not
-its event handlers, keyboard shortcut or Pencil squeeze: those belong to one menu.
+its event handlers, keyboard shortcut or Pencil squeeze: those belong to one menu. While a nested menu
+is open, the outer menu hides its indicator so it never covers the nested menu's
+rows. Two menus on opposite edges, one nested in the other, give each side its own
+menu.

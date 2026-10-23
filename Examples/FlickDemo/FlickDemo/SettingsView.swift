@@ -80,7 +80,12 @@ struct EdgeAppearanceEditor: View {
             ForEach(RowChoice.allCases) { Text($0.rawValue.capitalized).tag($0) }
         }
         Picker("Background", selection: $appearance.background) {
-            ForEach(BackgroundChoice.allCases) { Text($0.rawValue.capitalized).tag($0) }
+            Section("Full screen") {
+                ForEach(BackgroundChoice.allCases.filter { !$0.isContained }) { Text($0.title).tag($0) }
+            }
+            Section("Contained") {
+                ForEach(BackgroundChoice.allCases.filter(\.isContained)) { Text($0.title).tag($0) }
+            }
         }
         Picker("Physics", selection: $appearance.physics) {
             ForEach(PhysicsChoice.allCases) { Text($0.rawValue.capitalized).tag($0) }

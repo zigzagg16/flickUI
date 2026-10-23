@@ -58,12 +58,15 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
     @State private var origin: CGPoint = .zero
     @State private var ticks = FeedbackTicks()
     @State private var controller = FlickMenuController()
+    @State private var nesting = FlickMenuNesting()
+    @Environment(\.flickMenuParent) private var parent
 
     func body(content: Content) -> some View {
         controller.perform = { command in perform(command) }
         return content
             .environment(\.flickMenuSettings, settings.forNestedMenus)
             .environment(\.flickMenu, FlickMenuAction(controller: controller))
+            .environment(\.flickMenuParent, nesting)
             .gesture(edgeGesture(.left))
             .gesture(edgeGesture(.right))
             .gesture(edgeGesture(.top))
@@ -83,6 +86,12 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
             }
             .onChange(of: selectedIndex, initial: true) { _, newValue in
                 machine.send(.selectionChanged(newValue))
+            }
+            .onChange(of: machine.isOpen) { _, isOpen in
+                parent?.isNestedMenuOpen = isOpen
+            }
+            .onDisappear {
+                if machine.isOpen { parent?.isNestedMenuOpen = false }
             }
             .sensoryFeedback(trigger: ticks.open) { _, _ in settings.feedback.open }
             .sensoryFeedback(trigger: ticks.highlight) { _, _ in settings.feedback.highlight }
@@ -126,6 +135,10 @@ where Data: RandomAccessCollection, Data.Element: Identifiable {
     private var selectedIndex: Int {
         guard let index = data.firstIndex(where: { $0.id == selection }) else { return 0 }
         return data.distance(from: data.startIndex, to: index)
+    }
+
+    private var isHiddenByNestedMenu: Bool {
+        nesting.isNestedMenuOpen && !machine.isOpen
     }
 
     private var deferredEdges: Edge.Set {
@@ -276,11 +289,9 @@ extension FlickMenuModifier {
         let globalOrigin = proxy.frame(in: .global).origin
 
         ZStack(alignment: .topLeading) {
-            if let session = machine.session {
-                background(for: session)
-            }
             // The indicator is drawn behind the rows: while the menu is open it sits
-            // under the highlighted item's symbol instead of repeating it.
+            // under the highlighted item's symbol instead of repeating it. The background
+            // goes behind both, and learns where the rows' labels are.
             ZStack(alignment: .topLeading) {
                 if let session = machine.session {
                     menu(for: session)
@@ -290,6 +301,14 @@ extension FlickMenuModifier {
             .backgroundPreferenceValue(FlickHighlightedSymbolKey.self) { anchor in
                 GeometryReader { local in
                     indicator(symbolFrame: anchor.map { local[$0] })
+                }
+            }
+            .backgroundPreferenceValue(FlickRowLabelBoundsKey.self) { anchors in
+                GeometryReader { local in
+                    if let session = machine.session {
+                        let frames = anchors.map { local[$0] }
+                        background(for: session, contentFrame: frames.isEmpty ? nil : frames.reduce(frames[0]) { $0.union($1) })
+                    }
                 }
             }
             FlickKeyboardCommands(session: machine.session, shortcut: settings.keyboardShortcut) { command in
@@ -319,10 +338,16 @@ extension FlickMenuModifier {
         }
     }
 
-    private func background(for session: FlickSession) -> some View {
+    private func background(for session: FlickSession, contentFrame: CGRect?) -> some View {
         let geometry = machine.geometry
+        let configuration = FlickMenuBackgroundStyleConfiguration(
+            edge: session.edge,
+            contentFrame: contentFrame,
+            containerSize: geometry.containerSize,
+            safeAreaInsets: geometry.safeAreaInsets
+        )
         return backgroundStyle(for: session.edge)
-            .makeBody(configuration: FlickMenuBackgroundStyleConfiguration(edge: session.edge))
+            .makeBody(configuration: configuration)
             .frame(width: geometry.containerSize.width, height: geometry.containerSize.height)
             .contentShape(Rectangle())
             .onTapGesture { send(.dismiss, animation: closeAnimation) }
@@ -390,6 +415,7 @@ extension FlickMenuModifier {
         )
         return appearance.style
             .makeBody(configuration: configuration)
+            .anchorPreference(key: FlickRowLabelBoundsKey.self, value: .bounds) { [$0] }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: edge.indicatorSideAlignment)
             // Keep labels clear of the far side's safe area.
             .padding(edge.indicatorSideEdges, machine.geometry.safeAreaInsets[edge.opposite] + 28)
@@ -433,6 +459,11 @@ extension FlickMenuModifier {
                 .hoverEffect()
                 .onTapGesture { send(.tapIndicator, animation: openAnimation) }
                 .position(placement.center)
+                // Out of the way of a nested menu's rows while that menu is open.
+                .opacity(isHiddenByNestedMenu ? 0 : 1)
+                .allowsHitTesting(!isHiddenByNestedMenu)
+                .accessibilityHidden(isHiddenByNestedMenu)
+                .animation(.easeInOut(duration: 0.2), value: isHiddenByNestedMenu)
                 // Opening, closing and choosing animate through `send`; while the finger
                 // moves the indicator follows it without animation.
                 .animation(indicatorAnimation, value: machine.indicator)

@@ -56,7 +56,7 @@ ContentView()
 | `flickMenuIndicatorStyle` | ✓ | `.automatic` (a morphing drop, in Liquid Glass on iOS 26+), `.morphing(.drop / .squircle / .liquid / .still, tint:)`, `.glass`, `.bubble`, `.capsule`, or your own `FlickIndicatorStyle` |
 | `flickMenuHighlight` / `flickMenuSelection` | ✓ | `FlickMenuItemEmphasis`: tint, symbol variant and SF Symbols effect (`.bounce`, `.pulse`, `.wiggle`, `.breathe`, `.rotate`, `.scale`, `.variableColor`, once or `.repeating`) |
 | `flickMenuRowStyle` | ✓ | `.magnifying` (default), `.plain`, or your own `FlickMenuRowStyle` |
-| `flickMenuBackground` | ✓ | `.material` (default), `.gradient`, `.color`, `.clear`, or your own `FlickMenuBackgroundStyle`. Rows switch to light text on dark backgrounds (`contentColorScheme`) |
+| `flickMenuBackground` | ✓ | Full screen: `.material` (default), `.gradient`, `.color`, `.clear`. Contained, holding only the rows: `.panel`, `.glassPanel`, `.drawer`, `.halo`, with `.panel(_:)` / `.drawer(_:)` taking a material, colour or Liquid Glass fill. Or your own `FlickMenuBackgroundStyle`. Rows switch to light text on dark backgrounds (`contentColorScheme`) |
 | `flickMenuPhysics` / `flickMenuTracking` | ✓ | `.fluid` (default), `.carioca`, `.snappy`, `.direct`. Every item stays reachable wherever a swipe starts (`reachesAllItems`), except with `.carioca` |
 | `flickMenuBoomerang` | ✓ | `.stay` (default), `.edge`, `.position`, `.origin` |
 | `flickMenuLayout` | ✓ | item length, indicator size and margin |
@@ -117,8 +117,9 @@ the left/right and top/bottom edges.
 
 The grid button switches to a second app, **Webcams**, which shows the live motorway
 cameras from [cita.lu](https://www.cita.lu/fr/webcam/a13.html) with two nested
-menus: the side edges switch between the motorway's live stream and its cameras,
-and the top/bottom edges switch motorways. cita.lu has no webcam API, so the app
+menus, one per side: the right edge switches between the motorway's live stream and
+its cameras, and the left edge switches motorways. Their rows sit on a contained
+panel so the camera stays visible; the brush button tries the other backgrounds. cita.lu has no webcam API, so the app
 reads the camera list from each motorway's page and reloads each camera's JPEG every
 30 seconds. The live stream is the HLS playlist linked from the motorway's
 live-stream page, played muted until you unmute it.

@@ -8,6 +8,15 @@ import SwiftUI
 public struct FlickMenuBackgroundStyleConfiguration {
     /// The physical edge the menu was opened from.
     public let edge: FlickScreenEdge
+    /// The area the rows' labels take up, in the background's coordinate space, for
+    /// backgrounds that hold the rows rather than cover the screen. It follows the menu
+    /// as it moves, and can extend past the screen when the menu is longer than it.
+    /// `nil` until the rows are laid out.
+    public let contentFrame: CGRect?
+    /// The size of the background, which covers the menu's container.
+    public let containerSize: CGSize
+    /// The container's safe-area insets.
+    public let safeAreaInsets: FlickInsets
 }
 
 /// The appearance of the layer behind the menu rows.

@@ -89,6 +89,15 @@ struct FlickHighlightedSymbolKey: PreferenceKey {
     }
 }
 
+/// The bounds of every row's label, for backgrounds that hold the rows.
+struct FlickRowLabelBoundsKey: PreferenceKey {
+    static var defaultValue: [Anchor<CGRect>] { [] }
+
+    static func reduce(value: inout [Anchor<CGRect>], nextValue: () -> [Anchor<CGRect>]) {
+        value.append(contentsOf: nextValue())
+    }
+}
+
 /// A menu row's label: the item's SF Symbol and title, with the highlight and
 /// selection emphasis applied.
 struct FlickMenuItemLabel: View {
