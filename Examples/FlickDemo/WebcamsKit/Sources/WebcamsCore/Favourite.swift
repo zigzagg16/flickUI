@@ -1,17 +1,22 @@
 import Foundation
 
 /// A favourite: a motorway's live stream, or one of its cameras.
-struct Favourite: Codable, Hashable, Identifiable, Sendable {
-    enum Feed: Codable, Hashable, Sendable {
+public struct Favourite: Codable, Hashable, Identifiable, Sendable {
+    public enum Feed: Codable, Hashable, Sendable {
         case live
         /// A camera, by its identifier.
         case camera(String)
     }
 
-    var motorwayID: String
-    var feed: Feed
+    public var motorwayID: String
+    public var feed: Feed
 
-    var id: String {
+    public init(motorwayID: String, feed: Feed) {
+        self.motorwayID = motorwayID
+        self.feed = feed
+    }
+
+    public var id: String {
         switch feed {
         case .live: "\(motorwayID)/live"
         case let .camera(cameraID): "\(motorwayID)/\(cameraID)"
@@ -19,20 +24,20 @@ struct Favourite: Codable, Hashable, Identifiable, Sendable {
     }
 }
 
-/// Saves the favourites in the App Group, so the widget can offer them too.
-enum FavouriteStore {
+/// Saves the favourites in the ``SharedContainer``, so the widget can offer them too.
+public enum FavouriteStore {
     private static let key = "favourites"
 
     private static var defaults: UserDefaults {
-        UserDefaults(suiteName: RoadReportStore.appGroup) ?? .standard
+        SharedContainer.defaults
     }
 
-    static func load() -> [Favourite] {
+    public static func load() -> [Favourite] {
         guard let data = defaults.data(forKey: key) else { return [] }
         return (try? JSONDecoder().decode([Favourite].self, from: data)) ?? []
     }
 
-    static func save(_ favourites: [Favourite]) {
+    public static func save(_ favourites: [Favourite]) {
         defaults.set(try? JSONEncoder().encode(favourites), forKey: key)
     }
 }

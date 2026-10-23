@@ -7,104 +7,104 @@ import Foundation
 /// places, add or retire cameras and change refresh rates without an app update.
 /// ``CatalogStore`` loads it; `catalog.json`, bundled with the app, is the catalog
 /// until there is a backend.
-struct WebcamCatalog: Codable, Hashable, Sendable {
+public struct WebcamCatalog: Codable, Hashable, Sendable {
     /// The format's version, so an older app can tell a catalog it doesn't understand.
-    var version: Int
+    public var version: Int
     /// When the backend built this catalog.
-    var updatedAt: Date
+    public var updatedAt: Date
     /// Who provides the pictures, shown in the app.
-    var source: Source
-    var motorways: [Motorway]
+    public var source: Source
+    public var motorways: [Motorway]
     /// Settings the backend can tune.
-    var settings: Settings
+    public var settings: Settings
 
-    struct Source: Codable, Hashable, Sendable {
-        var name: String
-        var website: URL
-        var attribution: String?
+    public struct Source: Codable, Hashable, Sendable {
+        public var name: String
+        public var website: URL
+        public var attribution: String?
     }
 
-    struct Motorway: Codable, Hashable, Sendable, Identifiable {
+    public struct Motorway: Codable, Hashable, Sendable, Identifiable {
         /// A stable identifier, such as "a13".
-        var id: String
+        public var id: String
         /// The road number, such as "A13".
-        var code: String
+        public var code: String
         /// The full name, such as "Autoroute de la Sarre".
-        var name: String
+        public var name: String
         /// A short name for the menu, such as "A13 Sarre".
-        var shortName: String
+        public var shortName: String
         /// An SF Symbol for the menu.
-        var symbol: String?
+        public var symbol: String?
         /// The position in the menu; lower comes first.
-        var order: Int?
+        public var order: Int?
         /// The source's own page, to open in a browser.
-        var website: URL?
-        var liveStream: LiveStream?
-        var trafficMap: TrafficMap?
-        var cameras: [Camera]
+        public var website: URL?
+        public var liveStream: LiveStream?
+        public var trafficMap: TrafficMap?
+        public var cameras: [Camera]
     }
 
-    struct Camera: Codable, Hashable, Sendable, Identifiable {
+    public struct Camera: Codable, Hashable, Sendable, Identifiable {
         /// A stable identifier, unique across motorways, such as "13034".
-        var id: String
+        public var id: String
         /// Where the camera is, such as "Sanem".
-        var place: String
+        public var place: String
         /// Where it looks, such as "Pétange".
-        var direction: String?
+        public var direction: String?
         /// The still picture, without cache-busting query.
-        var imageURL: URL
+        public var imageURL: URL
         /// How often the source updates the picture, in seconds.
-        var refreshInterval: TimeInterval?
-        var coordinate: Coordinate?
+        public var refreshInterval: TimeInterval?
+        public var coordinate: Coordinate?
         /// The road's direction of travel on each half of the picture, for the
         /// traffic estimate per carriageway.
-        var carriageways: Carriageways?
+        public var carriageways: Carriageways?
         /// `false` to keep a camera listed but hidden, such as during works.
-        var isEnabled: Bool?
+        public var isEnabled: Bool?
     }
 
-    struct LiveStream: Codable, Hashable, Sendable {
+    public struct LiveStream: Codable, Hashable, Sendable {
         /// An HLS playlist.
-        var url: URL
+        public var url: URL
         /// Whether to start muted, as the source does.
-        var startsMuted: Bool?
+        public var startsMuted: Bool?
     }
 
-    struct TrafficMap: Codable, Hashable, Sendable {
-        var imageURL: URL
-        var refreshInterval: TimeInterval?
+    public struct TrafficMap: Codable, Hashable, Sendable {
+        public var imageURL: URL
+        public var refreshInterval: TimeInterval?
     }
 
-    struct Coordinate: Codable, Hashable, Sendable {
-        var latitude: Double
-        var longitude: Double
+    public struct Coordinate: Codable, Hashable, Sendable {
+        public var latitude: Double
+        public var longitude: Double
     }
 
-    struct Carriageways: Codable, Hashable, Sendable {
+    public struct Carriageways: Codable, Hashable, Sendable {
         /// Where traffic on the left half of the picture is heading, such as "Schengen".
-        var left: String?
-        var right: String?
+        public var left: String?
+        public var right: String?
     }
 
-    struct Settings: Codable, Hashable, Sendable {
+    public struct Settings: Codable, Hashable, Sendable {
         /// How long the app may use this catalog before asking for a new one, in seconds.
-        var catalogMaxAge: TimeInterval?
+        public var catalogMaxAge: TimeInterval?
         /// The default picture refresh, for cameras without their own, in seconds.
-        var imageRefreshInterval: TimeInterval?
+        public var imageRefreshInterval: TimeInterval?
         /// The vehicle detection model to download, a Core ML `.mlmodel`.
-        var vehicleModelURL: URL?
+        public var vehicleModelURL: URL?
     }
 }
 
 extension WebcamCatalog {
     /// The decoder for the backend's JSON: ISO 8601 dates, camel-case keys.
-    static func decode(from data: Data) throws -> WebcamCatalog {
+    public static func decode(from data: Data) throws -> WebcamCatalog {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode(WebcamCatalog.self, from: data)
     }
 
-    func encoded() throws -> Data {
+    public func encoded() throws -> Data {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
@@ -112,7 +112,7 @@ extension WebcamCatalog {
     }
 
     /// The motorways in menu order.
-    var orderedMotorways: [Motorway] {
+    public var orderedMotorways: [Motorway] {
         motorways.enumerated()
             .sorted { ($0.element.order ?? $0.offset, $0.offset) < ($1.element.order ?? $1.offset, $1.offset) }
             .map(\.element)
@@ -120,11 +120,11 @@ extension WebcamCatalog {
 }
 
 /// The motorways the app shows come from the catalog.
-typealias Motorway = WebcamCatalog.Motorway
+public typealias Motorway = WebcamCatalog.Motorway
 
 extension WebcamCatalog {
     /// A catalog with nothing in it, for when none can be read.
-    static let empty = WebcamCatalog(
+    public static let empty = WebcamCatalog(
         version: 1,
         updatedAt: .distantPast,
         source: Source(name: "", website: URL(filePath: "/")),
@@ -132,35 +132,35 @@ extension WebcamCatalog {
         settings: Settings()
     )
 
-    func motorway(withID id: String) -> Motorway? {
+    public func motorway(withID id: String) -> Motorway? {
         motorways.first { $0.id == id }
     }
 
     /// The app's camera model for a catalog camera, with the default refresh applied.
-    func webcam(for camera: Camera) -> Webcam {
+    public func webcam(for camera: Camera) -> Webcam {
         camera.webcam(defaultRefresh: settings.imageRefreshInterval)
     }
 }
 
 extension WebcamCatalog.Motorway {
     /// The cameras to show.
-    var enabledCameras: [WebcamCatalog.Camera] {
+    public var enabledCameras: [WebcamCatalog.Camera] {
         cameras.filter { $0.isEnabled ?? true }
     }
 
     /// "A13 : Autoroute de la Sarre".
-    var title: String {
+    public var title: String {
         "\(code) : \(name)"
     }
 
-    var menuSymbol: String {
+    public var menuSymbol: String {
         symbol ?? "road.lanes"
     }
 }
 
 extension WebcamCatalog.Camera {
     /// The app's camera model, as the screens and analysis use it.
-    func webcam(defaultRefresh: TimeInterval? = nil) -> Webcam {
+    public func webcam(defaultRefresh: TimeInterval? = nil) -> Webcam {
         Webcam(
             id: id,
             place: place,

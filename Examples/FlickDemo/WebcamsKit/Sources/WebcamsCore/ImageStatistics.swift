@@ -1,38 +1,20 @@
-import CoreGraphics
 import Foundation
 
 /// Brightness, contrast and sharpness of a picture, from a small greyscale copy.
 ///
+/// Each platform makes the copy its own way: see `WebcamsVision` on Apple platforms.
+///
 /// The thresholds are starting values for cita.lu's cameras, to tune on real pictures.
-struct ImageStatistics: Sendable {
+public struct ImageStatistics: Sendable {
     /// Mean brightness, 0–255.
-    let brightness: Double
+    public let brightness: Double
     /// Standard deviation of brightness, 0–255. Fog and blank pictures have little.
-    let contrast: Double
+    public let contrast: Double
     /// Mean difference between neighbouring pixels. Fog and blur flatten edges.
-    let sharpness: Double
+    public let sharpness: Double
 
-    init?(image: CGImage, width: Int = 64, height: Int = 48) {
-        var pixels = [UInt8](repeating: 0, count: width * height)
-        let drawn = pixels.withUnsafeMutableBytes { buffer -> Bool in
-            guard let context = CGContext(
-                data: buffer.baseAddress,
-                width: width,
-                height: height,
-                bitsPerComponent: 8,
-                bytesPerRow: width,
-                space: CGColorSpaceCreateDeviceGray(),
-                bitmapInfo: CGImageAlphaInfo.none.rawValue
-            ) else { return false }
-            context.interpolationQuality = .medium
-            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-            return true
-        }
-        guard drawn else { return nil }
-        self.init(pixels: pixels, width: width)
-    }
-
-    init(pixels: [UInt8], width: Int) {
+    /// - Parameter pixels: Greyscale, 0–255, row by row.
+    public init(pixels: [UInt8], width: Int) {
         let count = Double(max(pixels.count, 1))
         let mean = pixels.reduce(0.0) { $0 + Double($1) } / count
         let variance = pixels.reduce(0.0) { $0 + pow(Double($1) - mean, 2) } / count
@@ -48,11 +30,11 @@ struct ImageStatistics: Sendable {
     }
 
     /// A single grey, as cameras send when they have no picture.
-    var isBlank: Bool {
+    public var isBlank: Bool {
         contrast < 3
     }
 
-    var light: RoadReport.Light {
+    public var light: RoadReport.Light {
         switch brightness {
         case ..<45: .night
         case ..<85: .dusk
@@ -61,7 +43,7 @@ struct ImageStatistics: Sendable {
     }
 
     /// Only judged by day: at night, headlights make the picture contrasted anyway.
-    var visibility: RoadReport.Visibility {
+    public var visibility: RoadReport.Visibility {
         guard light == .day else { return .good }
         if contrast < 20 || sharpness < 3 { return .poor }
         if contrast < 32 || sharpness < 5 { return .reduced }

@@ -1,4 +1,5 @@
 import SwiftUI
+import WebcamsCore
 
 /// The apps in the demo, each built around a flick menu.
 enum DemoApp: String, CaseIterable, Identifiable {

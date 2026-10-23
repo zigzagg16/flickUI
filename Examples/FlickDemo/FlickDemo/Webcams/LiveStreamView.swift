@@ -2,6 +2,8 @@ import AVFoundation
 import Combine
 import SwiftUI
 import UIKit
+import WebcamsCore
+import WebcamsVision
 
 /// A motorway's live stream, muted on start like on cita.lu.
 struct LiveStreamView: View {

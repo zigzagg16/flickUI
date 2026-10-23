@@ -1,7 +1,10 @@
+#if canImport(Vision)
+
 import CoreGraphics
 import CoreML
 import Foundation
 import Vision
+import WebcamsCore
 
 /// Finds vehicles in a picture with a Core ML object detector run through Vision.
 ///
@@ -10,15 +13,15 @@ import Vision
 /// the catalog's `vehicleModelURL` and compiled on the device the first time vehicle
 /// detection is turned on, rather than shipped in the repository. A model named
 /// `VehicleDetector` added to the app target is used instead when present.
-final class VehicleDetector {
-    static let vehicleLabels: Set<String> = ["car", "truck", "bus", "motorbike", "motorcycle"]
-    static let minimumConfidence: Float = 0.2
+public final class VehicleDetector {
+    public static let vehicleLabels: Set<String> = ["car", "truck", "bus", "motorbike", "motorcycle"]
+    public static let minimumConfidence: Float = 0.2
 
-    enum InstallError: LocalizedError {
+    public enum InstallError: LocalizedError {
         case noModel
         case download
 
-        var errorDescription: String? {
+        public var errorDescription: String? {
             switch self {
             case .noModel: "No vehicle detection model is configured."
             case .download: "The vehicle detection model couldn't be downloaded."
@@ -32,13 +35,13 @@ final class VehicleDetector {
     // MARK: Installing
 
     /// A model the app can use, and where it comes from.
-    struct InstalledModel: Equatable, Sendable {
+    public struct InstalledModel: Equatable, Sendable {
         /// The model's name, such as "YOLOv3FP16".
-        var name: String
+        public var name: String
         /// The size of the compiled model on the device.
-        var bytes: Int64
+        public var bytes: Int64
         /// Added to the app target rather than downloaded.
-        var isBundled: Bool
+        public var isBundled: Bool
     }
 
     /// A model added to the app target, which Xcode compiles.
@@ -58,14 +61,14 @@ final class VehicleDetector {
     }
 
     /// The model in use: the bundled one, or the one downloaded from `modelURL`.
-    static func modelFile(for modelURL: URL?) -> URL? {
+    public static func modelFile(for modelURL: URL?) -> URL? {
         if let bundledURL { return bundledURL }
         guard let modelURL else { return nil }
         let url = installedURL(for: modelURL)
         return FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) ? url : nil
     }
 
-    static func installedModel(for modelURL: URL?) -> InstalledModel? {
+    public static func installedModel(for modelURL: URL?) -> InstalledModel? {
         guard let file = modelFile(for: modelURL) else { return nil }
         return InstalledModel(
             name: file.deletingPathExtension().lastPathComponent,
@@ -76,7 +79,7 @@ final class VehicleDetector {
 
     /// Downloads and compiles the model, unless it is already there, and removes any
     /// other downloaded model. Reports the download's progress, from 0 to 1.
-    static func install(from modelURL: URL?, progress: @escaping @Sendable (Double) -> Void = { _ in }) async throws {
+    public static func install(from modelURL: URL?, progress: @escaping @Sendable (Double) -> Void = { _ in }) async throws {
         guard modelFile(for: modelURL) == nil else { return }
         guard let modelURL else { throw InstallError.noModel }
         let observer = DownloadObserver(onProgress: progress)
@@ -97,7 +100,7 @@ final class VehicleDetector {
     }
 
     /// Deletes downloaded models, including one kept by an earlier version of the app.
-    static func removeDownloadedModels() {
+    public static func removeDownloadedModels() {
         let fileManager = FileManager.default
         try? fileManager.removeItem(at: modelsDirectory)
         try? fileManager.removeItem(at: URL.applicationSupportDirectory.appending(path: "VehicleDetector.mlmodelc"))
@@ -127,7 +130,7 @@ final class VehicleDetector {
     /// picture distant vehicles are a few pixels and go unseen. The picture is also
     /// looked at in overlapping tiles, each scaled up to the model's size, and the
     /// detections are merged.
-    func vehicles(in image: CGImage, modelFile: URL) throws -> [CGRect] {
+    public func vehicles(in image: CGImage, modelFile: URL) throws -> [CGRect] {
         let model = try loadedModel(from: modelFile)
         var detections: [Detection] = []
         for tile in Self.tiles {
@@ -150,7 +153,7 @@ final class VehicleDetector {
 
     /// The whole picture, then six overlapping tiles, half as wide and 60 % as tall,
     /// normalised with the origin at the top left.
-    static let tiles: [CGRect] = [fullImage] + [0.0, 0.4].flatMap { y in
+    public static let tiles: [CGRect] = [fullImage] + [0.0, 0.4].flatMap { y in
         [0.0, 0.25, 0.5].map { x in CGRect(x: x, y: y, width: 0.5, height: 0.6) }
     }
 
@@ -210,13 +213,15 @@ private final class DownloadObserver: NSObject, URLSessionTaskDelegate, @uncheck
     private let onProgress: @Sendable (Double) -> Void
     private var observation: NSKeyValueObservation?
 
-    init(onProgress: @escaping @Sendable (Double) -> Void) {
+    public init(onProgress: @escaping @Sendable (Double) -> Void) {
         self.onProgress = onProgress
     }
 
-    func urlSession(_ session: URLSession, didCreateTask task: URLSessionTask) {
+    public func urlSession(_ session: URLSession, didCreateTask task: URLSessionTask) {
         observation = task.progress.observe(\.fractionCompleted) { [onProgress] progress, _ in
             onProgress(progress.fractionCompleted)
         }
     }
 }
+
+#endif

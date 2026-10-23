@@ -1,6 +1,8 @@
 import flickUI
 import SwiftUI
 import UIKit
+import WebcamsCore
+import WebcamsVision
 
 /// The UserDefaults key of whether detected vehicles are drawn over the picture.
 private let showsVehiclesKey = "showsVehicleDetections"

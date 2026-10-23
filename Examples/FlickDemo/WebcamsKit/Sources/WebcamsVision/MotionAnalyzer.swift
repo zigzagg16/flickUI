@@ -1,88 +1,40 @@
+#if canImport(Vision)
+
 import CoreImage
 import CoreVideo
 import Foundation
 import Vision
+import WebcamsCore
 
 /// A frame copied from the live stream's video output.
 ///
 /// Each frame is a fresh copy handed to the analyzer and never touched again by the
 /// player, so it is safe to send.
-struct VideoFrame: @unchecked Sendable {
-    let buffer: CVPixelBuffer
-}
+public struct VideoFrame: @unchecked Sendable {
+    public let buffer: CVPixelBuffer
 
-/// How much the live stream moves on each half of the picture, usually one
-/// carriageway each.
-struct MotionReading: Equatable, Sendable {
-    /// From 0 (nothing moves) to 1 (the most movement seen so far).
-    var left: Double
-    var right: Double
-    var measuredAt = Date.now
-
-    /// Older than a couple of looks: kept from an earlier visit of the camera.
-    var isFromEarlierVisit: Bool {
-        Date.now.timeIntervalSince(measuredAt) > 30
+    public init(buffer: CVPixelBuffer) {
+        self.buffer = buffer
     }
-
-    enum Level {
-        case still, slow, fast
-
-        var title: String {
-            switch self {
-            case .still: "Little movement"
-            case .slow: "Moving slowly"
-            case .fast: "Moving freely"
-            }
-        }
-    }
-
-    static func level(_ value: Double) -> Level {
-        switch value {
-        case ..<0.15: .still
-        case ..<0.5: .slow
-        default: .fast
-        }
-    }
-}
-
-/// The camera a live stream shows, read from the picture: streams cycle through
-/// several cameras, each with its label and caption burnt in.
-struct LiveCamera: Equatable, Sendable {
-    /// The identifier in the box in a top corner, such as "A6 WG 00.7".
-    var label: String
-    /// The caption at the bottom, such as "Croix de Cessange: direction Croix de Gasperich".
-    var caption: String?
-}
-
-/// What one look at the live stream found.
-struct LiveReading: Equatable, Sendable {
-    var camera: LiveCamera?
-    /// `nil` when the stream just changed camera, or cut between the two frames.
-    var motion: MotionReading?
-    /// After a switch, the camera's reading from its previous visit, if recent enough
-    /// to be a hint. It is never passed off as current.
-    var previousVisit: MotionReading?
-    /// The stream switched to another camera: the motion analysis starts over.
-    var cameraChanged = false
 }
 
 /// A frame kept for the dashboard. A `CGImage` never changes once made, so it is safe
 /// to share.
-struct StillFrame: @unchecked Sendable, Identifiable {
-    let id = UUID()
-    let image: CGImage
-    let date: Date
+public struct StillFrame: @unchecked Sendable, Identifiable {
+    public let id = UUID()
+    public let image: CGImage
+    public let date: Date
 }
 
 /// What the live stream last showed of one of its cameras, for the dashboard.
-struct CameraSnapshot: Sendable, Identifiable {
-    var id: String { camera.label }
-    var camera: LiveCamera
+public struct CameraSnapshot: Sendable, Identifiable {
+    public var id: String { camera.label }
+    public var camera: LiveCamera
     /// The last few frames, oldest first.
-    var frames: [StillFrame] = []
-    var lastSeen: Date
+    public var frames: [StillFrame] = []
+    public var lastSeen: Date
     /// The movement over the camera's last visit, averaged.
-    var motion: MotionReading?
+    public var motion: MotionReading?
 }
 
 /// Analyzes the live stream: which camera it shows, from the text burnt into the
@@ -91,7 +43,7 @@ struct CameraSnapshot: Sendable, Identifiable {
 /// Live streams switch cameras within the same feed. A cut between pictures, or a new
 /// camera label, starts the analysis over, so movement is never measured across two
 /// cameras and each camera keeps its own calibration.
-actor MotionAnalyzer {
+public actor MotionAnalyzer {
     /// The fastest movement seen per camera label, slowly forgotten, so readings are
     /// relative to each camera's usual traffic. Kept between launches.
     private var peaks: [String: Double]
@@ -128,7 +80,7 @@ actor MotionAnalyzer {
     private static let previousVisitLifetime: TimeInterval = 15 * 60
     private static let peaksKey = "liveMotionPeaks"
 
-    init() {
+    public init() {
         peaks = UserDefaults.standard.dictionary(forKey: Self.peaksKey) as? [String: Double] ?? [:]
     }
 
@@ -137,7 +89,7 @@ actor MotionAnalyzer {
     /// The least peak, so a quiet stream doesn't look fast.
     private static let minimumPeak = 1.5
 
-    func analyze(from first: VideoFrame, to second: VideoFrame) -> LiveReading {
+    public func analyze(from first: VideoFrame, to second: VideoFrame) -> LiveReading {
         let firstThumbnail = Self.thumbnail(of: first.buffer)
         let secondThumbnail = Self.thumbnail(of: second.buffer)
         defer { lastThumbnail = secondThumbnail }
@@ -173,12 +125,12 @@ actor MotionAnalyzer {
     }
 
     /// Every camera the stream showed since ``resetDashboard()``, by label.
-    func dashboard() -> [CameraSnapshot] {
+    public func dashboard() -> [CameraSnapshot] {
         snapshots.values.sorted { $0.camera.label.localizedStandardCompare($1.camera.label) == .orderedAscending }
     }
 
     /// Forgets the cameras shown, for another stream. Calibrations are kept.
-    func resetDashboard() {
+    public func resetDashboard() {
         snapshots = [:]
         visitReadings = []
         camera = nil
@@ -340,19 +292,10 @@ actor MotionAnalyzer {
         let bottom = textRequest(in: CGRect(x: 0, y: 0, width: 1, height: 0.16))
         let handler = VNImageRequestHandler(cvPixelBuffer: buffer, options: [:])
         guard (try? handler.perform([top, bottom])) != nil,
-              let label = lines(of: top).lazy.compactMap { cameraLabel(in: $0) }.first
+              let label = lines(of: top).lazy.compactMap(LiveCamera.label(in:)).first
         else { return nil }
         let caption = lines(of: bottom).first { $0.contains(":") || $0.localizedCaseInsensitiveContains("direction") }
         return LiveCamera(label: label, caption: caption)
-    }
-
-    /// The label in a line of text, such as "A6 WG 13.0": a road number, a short code
-    /// and a distance, upper-cased with single spaces so it reads the same every time.
-    static func cameraLabel(in line: String) -> String? {
-        let pattern = #/(?i)\b([AB]\s?\d{1,2})\s+([A-Z0-9]{1,4})\s+(\d{1,3}[.,]\d)\b/#
-        guard let match = line.firstMatch(of: pattern) else { return nil }
-        let road = match.1.uppercased().replacingOccurrences(of: " ", with: "")
-        return "\(road) \(match.2.uppercased()) \(match.3.replacingOccurrences(of: ",", with: "."))"
     }
 
     /// Reads text in a region, in Vision's coordinates (origin at the bottom left).
@@ -368,3 +311,5 @@ actor MotionAnalyzer {
         (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }
     }
 }
+
+#endif

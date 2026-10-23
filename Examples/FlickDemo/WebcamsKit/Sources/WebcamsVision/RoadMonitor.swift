@@ -1,11 +1,15 @@
+// Vision and Core ML exist only on Apple platforms: elsewhere this module is empty.
+#if canImport(Vision)
+
 import Foundation
 import Observation
+import WebcamsCore
 
 /// Keeps a report for every camera of a motorway, so the menu can show each
 /// camera's situation at a glance.
 @MainActor @Observable
-final class RoadMonitor {
-    enum DetectorState: Equatable {
+public final class RoadMonitor {
+    public enum DetectorState: Equatable {
         case off
         /// Downloading the model, from 0 to 1.
         case downloading(Double)
@@ -13,14 +17,14 @@ final class RoadMonitor {
         case failed(String)
     }
 
-    private(set) var reports: [String: RoadReport] = [:]
-    private(set) var detector = DetectorState.off
+    public private(set) var reports: [String: RoadReport] = [:]
+    public private(set) var detector = DetectorState.off
     /// The vehicle detection model on the device, if any.
-    private(set) var installedModel: VehicleDetector.InstalledModel?
+    public private(set) var installedModel: VehicleDetector.InstalledModel?
 
     /// Where to download the vehicle detection model, from the catalog. A new URL
     /// replaces the model, downloading the new one if detection is on.
-    var vehicleModelURL: URL? {
+    public var vehicleModelURL: URL? {
         didSet {
             guard vehicleModelURL != oldValue else { return }
             installedModel = VehicleDetector.installedModel(for: vehicleModelURL)
@@ -31,24 +35,24 @@ final class RoadMonitor {
         }
     }
 
-    var detectsVehicles: Bool {
+    public var detectsVehicles: Bool {
         detector == .on
     }
 
-    var isDownloadingModel: Bool {
+    public var isDownloadingModel: Bool {
         if case .downloading = detector { return true }
         return false
     }
 
     private static let detectsVehiclesKey = "detectsVehicles"
 
-    init() {
+    public init() {
         installedModel = VehicleDetector.installedModel(for: nil)
     }
 
     /// Turns vehicle detection on, downloading its model the first time, or off.
     /// The choice is remembered.
-    func setDetectsVehicles(_ isOn: Bool) async {
+    public func setDetectsVehicles(_ isOn: Bool) async {
         UserDefaults.standard.set(isOn, forKey: Self.detectsVehiclesKey)
         guard isOn else {
             detector = .off
@@ -71,7 +75,7 @@ final class RoadMonitor {
     }
 
     /// Deletes the downloaded model to free its space, and turns detection off.
-    func deleteModel() {
+    public func deleteModel() {
         VehicleDetector.removeDownloadedModels()
         UserDefaults.standard.set(false, forKey: Self.detectsVehiclesKey)
         detector = .off
@@ -79,28 +83,28 @@ final class RoadMonitor {
     }
 
     /// Restores the remembered choice.
-    func restore() async {
+    public func restore() async {
         if UserDefaults.standard.bool(forKey: Self.detectsVehiclesKey) {
             await setDetectsVehicles(true)
         }
     }
 
     /// How often every camera is looked at again.
-    static let interval: Duration = .seconds(120)
+    public static let interval: Duration = .seconds(120)
 
-    func report(for camera: Webcam) -> RoadReport? {
+    public func report(for camera: Webcam) -> RoadReport? {
         reports[camera.id]
     }
 
     /// Analyzes a picture the app just loaded.
-    func record(_ data: Data, for camera: Webcam) async {
+    public func record(_ data: Data, for camera: Webcam) async {
         let vehicleModel = detectsVehicles ? VehicleDetector.modelFile(for: vehicleModelURL) : nil
         if let report = await RoadAnalyzer.shared.analyze(data, camera: camera.id, vehicleModel: vehicleModel) {
             store(report, for: camera)
         }
     }
 
-    func recordFailure(for camera: Webcam) {
+    public func recordFailure(for camera: Webcam) {
         store(.unavailable(at: .now), for: camera)
     }
 
@@ -112,7 +116,7 @@ final class RoadMonitor {
 
     /// Looks at each camera in turn, then again after `interval`, until cancelled.
     /// Cameras analyzed recently, like the one on screen, are skipped.
-    func watch(_ cameras: [Webcam]) async {
+    public func watch(_ cameras: [Webcam]) async {
         while !Task.isCancelled {
             for camera in cameras {
                 guard !Task.isCancelled else { return }
@@ -128,3 +132,5 @@ final class RoadMonitor {
         }
     }
 }
+
+#endif

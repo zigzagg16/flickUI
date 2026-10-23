@@ -21,6 +21,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: swift test
+      - name: Webcams core tests (Linux)
+        run: swift test --package-path Examples/FlickDemo/WebcamsKit
 
   ios:
     name: Build and test (iOS)
@@ -32,6 +34,8 @@ jobs:
       - run: xcodebuild -version
       - name: Engine tests (macOS)
         run: swift test
+      - name: WebcamsKit tests (macOS)
+        run: swift test --package-path Examples/FlickDemo/WebcamsKit
       - name: Test on iOS Simulator
         run: |
           # The first available iPhone, whatever simulators this Xcode ships.

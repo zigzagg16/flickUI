@@ -1,5 +1,6 @@
 import AppIntents
 import Foundation
+import WebcamsCore
 
 /// A camera, as the widget's configuration offers it.
 struct WebcamEntity: AppEntity {

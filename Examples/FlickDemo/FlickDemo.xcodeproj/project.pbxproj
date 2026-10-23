@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		F1C0000000000000000000B1 /* flickUI in Frameworks */ = {isa = PBXBuildFile; productRef = F1C0000000000000000000D1 /* flickUI */; };
+		F1C000000000000000000121 /* WebcamsCore in Frameworks */ = {isa = PBXBuildFile; productRef = F1C000000000000000000131 /* WebcamsCore */; };
+		F1C000000000000000000122 /* WebcamsVision in Frameworks */ = {isa = PBXBuildFile; productRef = F1C000000000000000000132 /* WebcamsVision */; };
+		F1C000000000000000000123 /* WebcamsCore in Frameworks */ = {isa = PBXBuildFile; productRef = F1C000000000000000000133 /* WebcamsCore */; };
 		F1C000000000000000000111 /* WebcamWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F1C000000000000000000101 /* WebcamWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -51,11 +54,6 @@
 			path = WebcamWidget;
 			sourceTree = "<group>";
 		};
-		F1C000000000000000000103 /* CitaKit */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = CitaKit;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -64,6 +62,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				F1C0000000000000000000B1 /* flickUI in Frameworks */,
+				F1C000000000000000000121 /* WebcamsCore in Frameworks */,
+				F1C000000000000000000122 /* WebcamsVision in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +71,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F1C000000000000000000123 /* WebcamsCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -81,7 +82,6 @@
 			isa = PBXGroup;
 			children = (
 				F1C0000000000000000000C2 /* FlickDemo */,
-				F1C000000000000000000103 /* CitaKit */,
 				F1C000000000000000000102 /* WebcamWidget */,
 				F1C0000000000000000000C3 /* Products */,
 			);
@@ -115,11 +115,12 @@
 			);
 			fileSystemSynchronizedGroups = (
 				F1C0000000000000000000C2 /* FlickDemo */,
-				F1C000000000000000000103 /* CitaKit */,
 			);
 			name = FlickDemo;
 			packageProductDependencies = (
 				F1C0000000000000000000D1 /* flickUI */,
+				F1C000000000000000000131 /* WebcamsCore */,
+				F1C000000000000000000132 /* WebcamsVision */,
 			);
 			productName = FlickDemo;
 			productReference = F1C0000000000000000000A1 /* FlickDemo.app */;
@@ -139,9 +140,11 @@
 			);
 			fileSystemSynchronizedGroups = (
 				F1C000000000000000000102 /* WebcamWidget */,
-				F1C000000000000000000103 /* CitaKit */,
 			);
 			name = WebcamWidget;
+			packageProductDependencies = (
+				F1C000000000000000000133 /* WebcamsCore */,
+			);
 			productName = WebcamWidget;
 			productReference = F1C000000000000000000101 /* WebcamWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -175,6 +178,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F1C0000000000000000000D0 /* XCLocalSwiftPackageReference "../.." */,
+				F1C000000000000000000130 /* XCLocalSwiftPackageReference "WebcamsKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F1C0000000000000000000C3 /* Products */;
@@ -411,6 +415,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../..;
 		};
+		F1C000000000000000000130 /* XCLocalSwiftPackageReference "WebcamsKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = WebcamsKit;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -418,6 +426,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F1C0000000000000000000D0 /* XCLocalSwiftPackageReference "../.." */;
 			productName = flickUI;
+		};
+		F1C000000000000000000131 /* WebcamsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1C000000000000000000130 /* XCLocalSwiftPackageReference "WebcamsKit" */;
+			productName = WebcamsCore;
+		};
+		F1C000000000000000000132 /* WebcamsVision */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1C000000000000000000130 /* XCLocalSwiftPackageReference "WebcamsKit" */;
+			productName = WebcamsVision;
+		};
+		F1C000000000000000000133 /* WebcamsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1C000000000000000000130 /* XCLocalSwiftPackageReference "WebcamsKit" */;
+			productName = WebcamsCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -1,12 +1,15 @@
+#if canImport(Vision)
+
 import CoreGraphics
 import Foundation
 import ImageIO
 import Vision
+import WebcamsCore
 
 /// Reads camera pictures on the device with Vision, remembering each camera's
 /// previous pictures to tell a frozen camera from a live one.
-actor RoadAnalyzer {
-    static let shared = RoadAnalyzer()
+public actor RoadAnalyzer {
+    public static let shared = RoadAnalyzer()
 
     /// What the analyzer remembers about a camera between pictures.
     private struct CameraMemory {
@@ -26,7 +29,7 @@ actor RoadAnalyzer {
 
     /// Analyzes a picture of a camera. `nil` if it can't be decoded.
     /// - Parameter vehicleModel: The vehicle detection model to use, or `nil` not to detect vehicles.
-    func analyze(_ data: Data, camera id: String, vehicleModel: URL?, at date: Date = .now) -> RoadReport? {
+    public func analyze(_ data: Data, camera id: String, vehicleModel: URL?, at date: Date = .now) -> RoadReport? {
         guard let image = Self.image(from: data), let statistics = ImageStatistics(image: image) else { return nil }
 
         var memory = memories[id] ?? CameraMemory()
@@ -64,7 +67,7 @@ actor RoadAnalyzer {
         return report
     }
 
-    static func image(from data: Data) -> CGImage? {
+    public static func image(from data: Data) -> CGImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         return CGImageSourceCreateImageAtIndex(source, 0, nil)
     }
@@ -72,7 +75,7 @@ actor RoadAnalyzer {
     // MARK: Weather
 
     /// The weather Vision's scene classification sees, from the labels it is confident about.
-    static func weather(in image: CGImage) -> Set<RoadReport.Weather> {
+    public static func weather(in image: CGImage) -> Set<RoadReport.Weather> {
         let request = VNClassifyImageRequest()
         let handler = VNImageRequestHandler(cgImage: image)
         guard (try? handler.perform([request])) != nil, let observations = request.results else { return [] }
@@ -99,3 +102,5 @@ private extension RoadReport.Weather {
         }
     }
 }
+
+#endif

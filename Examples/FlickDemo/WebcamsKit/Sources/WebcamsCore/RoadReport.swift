@@ -1,10 +1,12 @@
+#if canImport(CoreGraphics)
 import CoreGraphics
+#endif
 import Foundation
 
 /// What the app reads from a camera image, on the device. These are estimates from
 /// the picture, never an official traffic state.
-struct RoadReport: Codable, Hashable, Sendable {
-    enum Feed: String, Codable, Sendable {
+public struct RoadReport: Codable, Equatable, Sendable {
+    public enum Feed: String, Codable, Sendable {
         case live
         /// The camera keeps sending the same picture.
         case frozen
@@ -12,22 +14,22 @@ struct RoadReport: Codable, Hashable, Sendable {
         case unavailable
     }
 
-    enum Light: String, Codable, Sendable {
+    public enum Light: String, Codable, Sendable {
         case day, dusk, night
     }
 
-    enum Visibility: String, Codable, Sendable {
+    public enum Visibility: String, Codable, Sendable {
         case good, reduced, poor
     }
 
-    enum Weather: String, Codable, Sendable, CaseIterable {
+    public enum Weather: String, Codable, Sendable, CaseIterable {
         case snow, fog, rain
     }
 
-    enum Traffic: String, Codable, Sendable, Comparable {
+    public enum Traffic: String, Codable, Sendable, Comparable {
         case empty, flowing, dense, jammed
 
-        static func < (lhs: Self, rhs: Self) -> Bool {
+        public static func < (lhs: Self, rhs: Self) -> Bool {
             lhs.rank < rhs.rank
         }
 
@@ -41,29 +43,57 @@ struct RoadReport: Codable, Hashable, Sendable {
         }
     }
 
-    var date: Date
-    var feed = Feed.live
-    var light = Light.day
-    var visibility = Visibility.good
-    var weather: Set<Weather> = []
+    public var date: Date
+    public var feed = Feed.live
+    public var light = Light.day
+    public var visibility = Visibility.good
+    public var weather: Set<Weather> = []
     /// The number of vehicles seen, with vehicle detection on.
-    var vehicles: Int?
+    public var vehicles: Int?
     /// The vehicles' boxes, normalised with the origin at the top left.
-    var vehicleBoxes: [CGRect] = []
-    var traffic: Traffic?
+    public var vehicleBoxes: [CGRect] = []
+    public var traffic: Traffic?
     /// The traffic on the left and right halves of the picture, usually one carriageway each.
-    var leftTraffic: Traffic?
-    var rightTraffic: Traffic?
+    public var leftTraffic: Traffic?
+    public var rightTraffic: Traffic?
     /// How fast things move in the live stream, from 0 (stopped) to 1, per half of the picture.
-    var leftMotion: Double?
-    var rightMotion: Double?
+    public var leftMotion: Double?
+    public var rightMotion: Double?
 
-    static func unavailable(at date: Date) -> Self {
+    public init(
+        date: Date,
+        feed: Feed = .live,
+        light: Light = .day,
+        visibility: Visibility = .good,
+        weather: Set<Weather> = [],
+        vehicles: Int? = nil,
+        vehicleBoxes: [CGRect] = [],
+        traffic: Traffic? = nil,
+        leftTraffic: Traffic? = nil,
+        rightTraffic: Traffic? = nil,
+        leftMotion: Double? = nil,
+        rightMotion: Double? = nil
+    ) {
+        self.date = date
+        self.feed = feed
+        self.light = light
+        self.visibility = visibility
+        self.weather = weather
+        self.vehicles = vehicles
+        self.vehicleBoxes = vehicleBoxes
+        self.traffic = traffic
+        self.leftTraffic = leftTraffic
+        self.rightTraffic = rightTraffic
+        self.leftMotion = leftMotion
+        self.rightMotion = rightMotion
+    }
+
+    public static func unavailable(at date: Date) -> Self {
         RoadReport(date: date, feed: .unavailable)
     }
 
     /// The conditions worth a mention, most important first.
-    var conditions: [String] {
+    public var conditions: [String] {
         switch feed {
         case .frozen: return ["Image not updating"]
         case .unavailable: return ["Camera unavailable"]
@@ -86,7 +116,7 @@ struct RoadReport: Codable, Hashable, Sendable {
     }
 
     /// A symbol for what matters most, or `nil` when nothing stands out.
-    var symbol: String? {
+    public var symbol: String? {
         switch feed {
         case .frozen: return "pause.circle.fill"
         case .unavailable: return "video.slash.fill"
@@ -102,7 +132,7 @@ struct RoadReport: Codable, Hashable, Sendable {
 }
 
 extension RoadReport.Traffic {
-    var title: String {
+    public var title: String {
         switch self {
         case .empty: "Empty"
         case .flowing: "Flowing"
@@ -113,7 +143,7 @@ extension RoadReport.Traffic {
 }
 
 extension RoadReport.Weather {
-    var title: String {
+    public var title: String {
         switch self {
         case .snow: "Snow"
         case .fog: "Fog"
@@ -123,7 +153,7 @@ extension RoadReport.Weather {
 }
 
 extension RoadReport.Visibility {
-    var title: String {
+    public var title: String {
         switch self {
         case .good: "Good visibility"
         case .reduced: "Reduced visibility"
@@ -133,7 +163,7 @@ extension RoadReport.Visibility {
 }
 
 extension RoadReport.Light {
-    var title: String {
+    public var title: String {
         switch self {
         case .day: "Day"
         case .dusk: "Dusk"

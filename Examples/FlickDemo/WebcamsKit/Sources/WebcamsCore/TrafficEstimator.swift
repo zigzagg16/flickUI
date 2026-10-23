@@ -1,4 +1,7 @@
+#if canImport(CoreGraphics)
 import CoreGraphics
+#endif
+import Foundation
 
 /// Estimates a camera's traffic from the vehicles in its successive pictures.
 ///
@@ -8,13 +11,13 @@ import CoreGraphics
 /// looks like a vehicle, and are left out; in a jam nothing moves, so it stays a jam.
 /// Each half of the picture, usually one carriageway, is judged on its own.
 /// The thresholds are starting values to tune on real pictures.
-struct TrafficEstimator {
-    struct Estimate: Equatable {
-        var traffic: RoadReport.Traffic
-        var left: RoadReport.Traffic
-        var right: RoadReport.Traffic
+public struct TrafficEstimator {
+    public struct Estimate: Equatable {
+        public var traffic: RoadReport.Traffic
+        public var left: RoadReport.Traffic
+        public var right: RoadReport.Traffic
         /// The vehicles counted, without parked ones.
-        var vehicles: [CGRect]
+        public var vehicles: [CGRect]
     }
 
     /// A box seen at about the same place picture after picture.
@@ -31,18 +34,20 @@ struct TrafficEstimator {
     }
 
     /// Boxes overlapping this much are the same vehicle.
-    static let sameVehicleOverlap: CGFloat = 0.5
+    public static let sameVehicleOverlap: CGFloat = 0.5
     /// Pictures in a row after which a vehicle counts as parked.
-    static let parkedAfter = 10
+    public static let parkedAfter = 10
     /// Pictures a track survives without being seen.
-    static let forgetAfter = 3
+    public static let forgetAfter = 3
 
     private var previous: [CGRect] = []
     private var tracks: [Track] = []
     /// The most vehicles seen at once, slowly forgotten: the camera's busy level.
     private var busiest: Double = 0
 
-    mutating func update(with boxes: [CGRect]) -> Estimate {
+    public init() {}
+
+    public mutating func update(with boxes: [CGRect]) -> Estimate {
         let seen = updateTracks(with: boxes)
         let parked = tracks.filter(\.isParked).map(\.box)
         let vehicles = boxes.filter { box in !parked.contains { Self.overlap(box, $0) >= Self.sameVehicleOverlap } }
@@ -67,7 +72,7 @@ struct TrafficEstimator {
         )
     }
 
-    static func level(count: Int, still: Int, capacity: Double) -> RoadReport.Traffic {
+    public static func level(count: Int, still: Int, capacity: Double) -> RoadReport.Traffic {
         guard count > 0 else { return .empty }
         let stillShare = Double(still) / Double(count)
         if count >= 4 && stillShare >= 0.6 { return .jammed }
@@ -77,12 +82,20 @@ struct TrafficEstimator {
     }
 
     /// Intersection over union of two boxes.
-    static func overlap(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {
-        let intersection = lhs.intersection(rhs)
-        guard !intersection.isNull else { return 0 }
-        let shared = intersection.width * intersection.height
+    public static func overlap(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {
+        let shared = sharedArea(lhs, rhs)
+        guard shared > 0 else { return 0 }
         let union = lhs.width * lhs.height + rhs.width * rhs.height - shared
         return union > 0 ? shared / union : 0
+    }
+
+    /// The area two boxes have in common, 0 when they don't meet.
+    ///
+    /// Computed by hand: `CGRect.intersection` isn't in Foundation on every platform.
+    public static func sharedArea(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {
+        let width = min(lhs.maxX, rhs.maxX) - max(lhs.minX, rhs.minX)
+        let height = min(lhs.maxY, rhs.maxY) - max(lhs.minY, rhs.minY)
+        return width > 0 && height > 0 ? width * height : 0
     }
 
     /// Matches the boxes to the tracks, and returns the indices of the tracks seen.

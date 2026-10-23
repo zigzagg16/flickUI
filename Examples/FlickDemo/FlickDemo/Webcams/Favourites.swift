@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import SwiftUI
+import WebcamsCore
 
 /// The user's favourites, in their order, saved as they change.
 @MainActor @Observable

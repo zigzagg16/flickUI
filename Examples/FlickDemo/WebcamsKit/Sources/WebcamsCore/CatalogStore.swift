@@ -1,14 +1,17 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 /// Where the app gets its ``WebcamCatalog``: the backend when there is one, the last
 /// catalog it sent, or the one bundled with the app.
 ///
 /// The backend's address is the `WebcamCatalogURL` Info.plist key; while it is empty,
-/// the bundled `catalog.json` is used. The last downloaded catalog is kept in the App
-/// Group, so the widget sees it too.
-enum CatalogStore {
+/// the bundled `catalog.json` is used. The last downloaded catalog is kept in the
+/// ``SharedContainer``, so the widget sees it too.
+public enum CatalogStore {
     /// The backend's address, if the app has one.
-    static var remoteURL: URL? {
+    public static var remoteURL: URL? {
         guard let value = Bundle.main.object(forInfoDictionaryKey: "WebcamCatalogURL") as? String,
               !value.isEmpty
         else { return nil }
@@ -17,13 +20,13 @@ enum CatalogStore {
 
     /// The catalog available right away, without the network: the last downloaded
     /// one, or the bundled one.
-    static func current() -> WebcamCatalog {
+    public static func current() -> WebcamCatalog {
         cached() ?? bundled() ?? .empty
     }
 
     /// Asks the backend for a new catalog when the current one is too old, and falls
     /// back to ``current()`` when it can't.
-    static func refreshed() async -> WebcamCatalog {
+    public static func refreshed() async -> WebcamCatalog {
         let current = current()
         guard let remoteURL else { return current }
         let maxAge = current.settings.catalogMaxAge ?? 24 * 60 * 60
@@ -45,8 +48,8 @@ enum CatalogStore {
         }
     }
 
-    static func bundled() -> WebcamCatalog? {
-        guard let url = Bundle.main.url(forResource: "catalog", withExtension: "json"),
+    public static func bundled() -> WebcamCatalog? {
+        guard let url = Bundle.module.url(forResource: "catalog", withExtension: "json"),
               let data = try? Data(contentsOf: url)
         else { return nil }
         return try? WebcamCatalog.decode(from: data)
@@ -58,8 +61,6 @@ enum CatalogStore {
     }
 
     private static var cacheURL: URL? {
-        FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: RoadReportStore.appGroup)?
-            .appending(path: "WebcamCatalog.json")
+        SharedContainer.url?.appending(path: "WebcamCatalog.json")
     }
 }
