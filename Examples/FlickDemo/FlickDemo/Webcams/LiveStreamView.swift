@@ -19,13 +19,47 @@ struct LiveStreamView: View {
     /// The camera the stream shows now, read from the picture.
     @State private var liveCamera: LiveCamera?
     @AppStorage("analyzesLiveMotion") private var analyzesMotion = true
+    /// Every camera the stream showed, with its last frames.
+    @State private var dashboard: [CameraSnapshot] = []
+    @State private var showsDashboard = false
 
     /// The time between the two frames compared: short enough for optical flow to
     /// follow a vehicle from one to the other.
-    private static let frameGap = Duration.milliseconds(200)
-    private static let motionInterval = Duration.seconds(2)
+    private static let frameGap = Duration.milliseconds(150)
+    /// The pause between looks: streams show each camera for a couple of seconds, so
+    /// looks come often enough for several readings per camera.
+    private static let motionInterval = Duration.milliseconds(400)
 
     var body: some View {
+        VStack(spacing: 0) {
+            playerView
+                .frame(maxHeight: showsDashboard ? 200 : .infinity)
+            if showsDashboard {
+                LiveDashboard(snapshots: dashboard, currentLabel: liveCamera?.label)
+            }
+        }
+        // Clear of the screen's header while the dashboard shows.
+        .padding(.top, showsDashboard ? 150 : 0)
+        .animation(.smooth, value: showsDashboard)
+        .onChange(of: isMuted, initial: true) { _, muted in
+            player.isMuted = muted
+        }
+        .onReceive(player.publisher(for: \.timeControlStatus).receive(on: DispatchQueue.main)) { status in
+            isPlaying = status == .playing
+        }
+        .task(id: "\(motorway.id)-\(attempt)") {
+            await play()
+        }
+        .task(id: "\(motorway.id)-\(attempt)-\(analyzesMotion)") {
+            await measureMotion()
+        }
+        .onDisappear {
+            player.pause()
+            player.replaceCurrentItem(with: nil)
+        }
+    }
+
+    private var playerView: some View {
         PlayerLayerView(player: player)
             .overlay {
                 if failed {
@@ -39,39 +73,33 @@ struct LiveStreamView: View {
                 }
             }
             .overlay(alignment: .bottomLeading) {
-                Button {
-                    isMuted.toggle()
-                } label: {
-                    Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                        .contentTransition(.symbolEffect(.replace))
-                        .frame(width: 24, height: 24)
-                        .padding(10)
-                        .background(.ultraThinMaterial, in: Circle())
+                HStack {
+                    Button {
+                        isMuted.toggle()
+                    } label: {
+                        Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                            .contentTransition(.symbolEffect(.replace))
+                            .roundButton()
+                    }
+                    .accessibilityLabel(isMuted ? "Unmute" : "Mute")
+                    if analyzesMotion {
+                        Button {
+                            showsDashboard.toggle()
+                        } label: {
+                            Image(systemName: showsDashboard ? "rectangle.fill" : "square.grid.2x2.fill")
+                                .contentTransition(.symbolEffect(.replace))
+                                .roundButton()
+                        }
+                        .accessibilityLabel(showsDashboard ? "Hide Dashboard" : "Show Dashboard")
+                    }
                 }
-                .accessibilityLabel(isMuted ? "Unmute" : "Mute")
-                .padding()
+                .padding(showsDashboard ? 8 : 16)
             }
             .overlay(alignment: .bottomTrailing) {
-                if isPlaying, !failed, motion != nil || liveCamera != nil {
+                if isPlaying, !failed, !showsDashboard, motion != nil || liveCamera != nil {
                     MotionBadge(camera: liveCamera, reading: motion)
                         .padding()
                 }
-            }
-            .onChange(of: isMuted, initial: true) { _, muted in
-                player.isMuted = muted
-            }
-            .onReceive(player.publisher(for: \.timeControlStatus).receive(on: DispatchQueue.main)) { status in
-                isPlaying = status == .playing
-            }
-            .task(id: "\(motorway.id)-\(attempt)") {
-                await play()
-            }
-            .task(id: "\(motorway.id)-\(attempt)-\(analyzesMotion)") {
-                await measureMotion()
-            }
-            .onDisappear {
-                player.pause()
-                player.replaceCurrentItem(with: nil)
             }
     }
 
@@ -104,6 +132,8 @@ struct LiveStreamView: View {
     private func measureMotion() async {
         motion = nil
         liveCamera = nil
+        dashboard = []
+        await motionAnalyzer.resetDashboard()
         guard analyzesMotion else { return }
         while !Task.isCancelled {
             try? await Task.sleep(for: Self.motionInterval)
@@ -111,7 +141,9 @@ struct LiveStreamView: View {
             try? await Task.sleep(for: Self.frameGap)
             guard let second = currentFrame() else { continue }
             let reading = await motionAnalyzer.analyze(from: first, to: second)
+            let snapshots = await motionAnalyzer.dashboard()
             guard !Task.isCancelled else { return }
+            dashboard = snapshots
             withAnimation(.smooth) {
                 liveCamera = reading.camera
                 // A new camera starts over; a cut alone keeps the last reading.
@@ -172,6 +204,16 @@ struct MotionBadge: View {
     }
 
     private func side(_ name: String, _ value: Double) -> some View {
+        MotionSide(name: name, value: value)
+    }
+}
+
+/// The movement on one carriageway, in words and as a gauge.
+struct MotionSide: View {
+    let name: String
+    let value: Double
+
+    var body: some View {
         HStack(spacing: 6) {
             Text("\(name): \(MotionReading.level(value).title)")
             Gauge(value: value) {
@@ -181,6 +223,98 @@ struct MotionBadge: View {
             .tint(value < 0.15 ? .red : value < 0.5 ? .orange : .green)
             .frame(width: 44)
         }
+    }
+}
+
+/// Every camera the live stream showed, side by side, each replaying its last frames.
+/// A camera's tile is as recent as the stream's last visit to it.
+struct LiveDashboard: View {
+    let snapshots: [CameraSnapshot]
+    /// The camera on screen now.
+    let currentLabel: String?
+
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 8)], spacing: 8) {
+                ForEach(snapshots) { snapshot in
+                    CameraTile(snapshot: snapshot, isCurrent: snapshot.id == currentLabel)
+                }
+            }
+            .padding(8)
+        }
+        .overlay {
+            if snapshots.isEmpty {
+                ContentUnavailableView(
+                    "Collecting Cameras",
+                    systemImage: "square.grid.2x2",
+                    description: Text("Each camera appears here as the stream shows it.")
+                )
+            }
+        }
+    }
+}
+
+struct CameraTile: View {
+    let snapshot: CameraSnapshot
+    let isCurrent: Bool
+
+    /// How long each kept frame shows in the tile's loop.
+    private static let frameDuration: TimeInterval = 0.5
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            TimelineView(.periodic(from: .now, by: Self.frameDuration)) { context in
+                if !snapshot.frames.isEmpty {
+                    let step = Int(context.date.timeIntervalSinceReferenceDate / Self.frameDuration)
+                    Image(decorative: snapshot.frames[step % snapshot.frames.count].image, scale: 1)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                } else {
+                    Color.gray.opacity(0.3)
+                        .aspectRatio(16 / 9, contentMode: .fit)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(isCurrent ? Color.yellow : .clear, lineWidth: 2)
+            }
+            Text(snapshot.camera.caption ?? snapshot.camera.label)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+            HStack {
+                Text(snapshot.camera.label)
+                    .font(.caption2.monospaced())
+                Spacer()
+                if isCurrent {
+                    Text("Live")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.red)
+                } else {
+                    Text(snapshot.lastSeen, style: .relative)
+                        .font(.caption2.monospacedDigit())
+                }
+            }
+            .foregroundStyle(.secondary)
+            if let motion = snapshot.motion {
+                Group {
+                    MotionSide(name: "L", value: motion.left)
+                    MotionSide(name: "R", value: motion.right)
+                }
+                .font(.caption2)
+            }
+        }
+        .padding(6)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private extension View {
+    func roundButton() -> some View {
+        frame(width: 24, height: 24)
+            .padding(10)
+            .background(.ultraThinMaterial, in: Circle())
     }
 }
 

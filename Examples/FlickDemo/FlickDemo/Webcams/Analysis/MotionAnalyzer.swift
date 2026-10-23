@@ -1,3 +1,4 @@
+import CoreImage
 import CoreVideo
 import Foundation
 import Vision
@@ -65,6 +66,25 @@ struct LiveReading: Equatable, Sendable {
     var cameraChanged = false
 }
 
+/// A frame kept for the dashboard. A `CGImage` never changes once made, so it is safe
+/// to share.
+struct StillFrame: @unchecked Sendable, Identifiable {
+    let id = UUID()
+    let image: CGImage
+    let date: Date
+}
+
+/// What the live stream last showed of one of its cameras, for the dashboard.
+struct CameraSnapshot: Sendable, Identifiable {
+    var id: String { camera.label }
+    var camera: LiveCamera
+    /// The last few frames, oldest first.
+    var frames: [StillFrame] = []
+    var lastSeen: Date
+    /// The movement over the camera's last visit, averaged.
+    var motion: MotionReading?
+}
+
 /// Analyzes the live stream: which camera it shows, from the text burnt into the
 /// picture, and how much it moves, with Vision's optical flow.
 ///
@@ -86,6 +106,21 @@ actor MotionAnalyzer {
     private var sawCut = false
     /// A small greyscale copy of the last frame looked at, to spot cuts between looks.
     private var lastThumbnail: [Float]?
+    /// When the label was last read: reading it is the slow part, so it is read after
+    /// a cut, and otherwise every couple of seconds.
+    private var lastLabelRead = Date.distantPast
+    /// Each camera the stream showed, by label, for the dashboard.
+    private var snapshots: [String: CameraSnapshot] = [:]
+    /// The readings of the current visit of the current camera.
+    private var visitReadings: [MotionReading] = []
+    private var lastFrameKept = Date.distantPast
+    private let imageContext = CIContext()
+
+    /// How often the label is read when nothing suggests a switch.
+    private static let labelInterval: TimeInterval = 2
+    /// How many frames each camera keeps, and how far apart.
+    private static let framesKept = 6
+    private static let frameInterval: TimeInterval = 0.5
 
     /// Mean brightness difference, 0–255, above which two frames show different scenes.
     private static let cutThreshold: Float = 28
@@ -112,20 +147,70 @@ actor MotionAnalyzer {
             sawCut = true
         }
 
-        let changed = updateCamera(with: Self.readCamera(in: second.buffer), cut: cutBetweenLooks || cutWithinPair)
+        let readsLabel = sawCut || camera == nil || candidateLabel != nil
+            || Date.now.timeIntervalSince(lastLabelRead) >= Self.labelInterval
+        let read = readsLabel ? Self.readCamera(in: second.buffer) : nil
+        if readsLabel { lastLabelRead = .now }
+        let changed = updateCamera(with: read, cut: cutBetweenLooks || cutWithinPair)
         // Movement across a cut, or right after a switch, means nothing.
         guard !changed, !cutWithinPair else {
-            if changed { savePeaks() }
+            if changed {
+                savePeaks()
+                visitReadings = []
+            }
             return LiveReading(camera: camera, motion: nil, previousVisit: changed ? previousVisit() : nil, cameraChanged: changed)
         }
         let key = camera?.label ?? ""
         let reading = motion(from: first, to: second, peakKey: key)
         if let reading {
             lastReadings[key] = reading
+            visitReadings.append(reading)
             readingsSinceSave += 1
             if readingsSinceSave >= 15 { savePeaks() }
         }
+        updateSnapshot(with: second)
         return LiveReading(camera: camera, motion: reading)
+    }
+
+    /// Every camera the stream showed since ``resetDashboard()``, by label.
+    func dashboard() -> [CameraSnapshot] {
+        snapshots.values.sorted { $0.camera.label.localizedStandardCompare($1.camera.label) == .orderedAscending }
+    }
+
+    /// Forgets the cameras shown, for another stream. Calibrations are kept.
+    func resetDashboard() {
+        snapshots = [:]
+        visitReadings = []
+        camera = nil
+        candidateLabel = nil
+        lastThumbnail = nil
+    }
+
+    /// Keeps a frame of the current camera every so often, and its visit's movement.
+    private func updateSnapshot(with frame: VideoFrame) {
+        guard let camera else { return }
+        var snapshot = snapshots[camera.label] ?? CameraSnapshot(camera: camera, lastSeen: .now)
+        snapshot.camera = camera
+        snapshot.lastSeen = .now
+        if !visitReadings.isEmpty {
+            let count = Double(visitReadings.count)
+            snapshot.motion = MotionReading(
+                left: visitReadings.map(\.left).reduce(0, +) / count,
+                right: visitReadings.map(\.right).reduce(0, +) / count
+            )
+        }
+        if Date.now.timeIntervalSince(lastFrameKept) >= Self.frameInterval, let image = still(of: frame) {
+            snapshot.frames.append(StillFrame(image: image, date: .now))
+            snapshot.frames = Array(snapshot.frames.suffix(Self.framesKept))
+            lastFrameKept = .now
+        }
+        snapshots[camera.label] = snapshot
+    }
+
+    /// A half-size copy of a frame.
+    private func still(of frame: VideoFrame) -> CGImage? {
+        let image = CIImage(cvPixelBuffer: frame.buffer).transformed(by: CGAffineTransform(scaleX: 0.5, y: 0.5))
+        return imageContext.createCGImage(image, from: image.extent)
     }
 
     /// The current camera's reading from its previous visit, if recent enough.
