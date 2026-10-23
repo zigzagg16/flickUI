@@ -2,16 +2,19 @@ import flickUI
 import SwiftUI
 import UIKit
 
-/// What the side menu shows: the motorway's live stream, then its cameras.
+/// What the side menu shows: the motorway's live stream, its traffic map, then its cameras.
 enum WebcamFeed: Identifiable, Hashable {
     case live
+    case map
     case camera(Webcam)
 
     static let liveID = "live"
+    static let mapID = "map"
 
     var id: String {
         switch self {
         case .live: Self.liveID
+        case .map: Self.mapID
         case let .camera(camera): camera.id
         }
     }
@@ -19,6 +22,7 @@ enum WebcamFeed: Identifiable, Hashable {
     var title: String {
         switch self {
         case .live: "Live stream"
+        case .map: "Traffic map"
         case let .camera(camera): camera.title
         }
     }
@@ -26,6 +30,7 @@ enum WebcamFeed: Identifiable, Hashable {
     var symbol: String {
         switch self {
         case .live: "play.tv.fill"
+        case .map: "map.fill"
         case let .camera(camera): camera.symbol
         }
     }
@@ -59,9 +64,9 @@ struct WebcamsView: View {
         pages[current]?.cameras ?? []
     }
 
-    /// The live stream is always there, so the menu works before the cameras load.
+    /// The live stream and map are always there, so the menu works before the cameras load.
     private var feeds: [WebcamFeed] {
-        [.live] + cameras.map(WebcamFeed.camera)
+        [.live, .map] + cameras.map(WebcamFeed.camera)
     }
 
     private var feed: WebcamFeed {
@@ -165,6 +170,12 @@ struct WebcamScreen: View {
             switch feed {
             case .live:
                 LiveStreamView(motorway: motorway)
+            case .map:
+                // Not a camera: shown as is, without analysis.
+                WebcamImage(
+                    camera: Webcam(id: "map-\(motorway.rawValue)", place: "Traffic map", direction: "", imageURL: motorway.trafficMapURL),
+                    analyzes: false
+                )
             case let .camera(camera):
                 WebcamImage(camera: camera)
             }
@@ -188,6 +199,12 @@ struct WebcamScreen: View {
                 case .live:
                     Text("Live stream")
                         .font(.title2.bold())
+                case .map:
+                    Text("Traffic map")
+                        .font(.title2.bold())
+                    Text("cita.lu")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.8))
                 case let .camera(camera):
                     Text(camera.place)
                         .font(.title2.bold())
@@ -242,6 +259,8 @@ struct WebcamScreen: View {
 /// A camera's still image, reloaded every 30 seconds while it is shown.
 struct WebcamImage: View {
     let camera: Webcam
+    /// Whether the road monitor reads the picture.
+    var analyzes = true
 
     @State private var image: UIImage?
     /// The camera `image` belongs to; the previous camera's image stays, dimmed, until the next one loads.
@@ -304,14 +323,14 @@ struct WebcamImage: View {
                     }
                     updated = .now
                     failed = false
-                    await monitor.record(data, for: camera)
+                    if analyzes { await monitor.record(data, for: camera) }
                 } else {
                     failed = !isCurrent
                 }
             } catch {
                 if !Task.isCancelled {
                     failed = !isCurrent
-                    monitor.recordFailure(for: camera)
+                    if analyzes { monitor.recordFailure(for: camera) }
                 }
             }
             try? await Task.sleep(for: Self.refreshInterval)

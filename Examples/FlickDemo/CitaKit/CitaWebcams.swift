@@ -32,6 +32,11 @@ enum Motorway: String, CaseIterable, Identifiable {
         CitaWebcams.baseURL.appending(path: "fr/live-stream/\(rawValue).html")
     }
 
+    /// cita.lu's traffic-state picture for the motorway, shown above its webcams.
+    var trafficMapURL: URL {
+        CitaWebcams.baseURL.appending(path: "webcam/service/\(rawValue)")
+    }
+
     /// The HLS stream the live-stream page plays, following the pattern the pages use.
     var defaultLiveStreamURL: URL {
         URL(string: "https://live-edge.rtl.lu/cita/cita_\(rawValue)/playlist.m3u8")!
