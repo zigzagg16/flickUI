@@ -6,32 +6,35 @@ import WebcamsVision
 /// The UserDefaults key of whether detected vehicles are drawn over the picture.
 private let showsVehiclesKey = "showsVehicleDetections"
 
-/// What the side menu shows: a motorway's live stream, its traffic map and its
-/// cameras, or the favourites, which can mix motorways.
+/// What the side menu shows: a motorway's live stream, its traffic map, its road map
+/// and its cameras, or the favourites, which can mix motorways.
 enum WebcamFeed: Identifiable, Hashable {
     case live(motorwayID: String)
     case map(motorwayID: String)
+    /// The cameras, incidents and travel time signs on a map.
+    case roadMap(motorwayID: String)
     case camera(Webcam, motorwayID: String)
 
     var id: String {
         switch self {
         case let .live(motorwayID): "live-\(motorwayID)"
         case let .map(motorwayID): "map-\(motorwayID)"
+        case let .roadMap(motorwayID): "roadmap-\(motorwayID)"
         case let .camera(camera, _): camera.id
         }
     }
 
     var motorwayID: String {
         switch self {
-        case let .live(motorwayID), let .map(motorwayID), let .camera(_, motorwayID): motorwayID
+        case let .live(motorwayID), let .map(motorwayID), let .roadMap(motorwayID), let .camera(_, motorwayID): motorwayID
         }
     }
 
-    /// The favourite this feed would be; the traffic map can't be one.
+    /// The favourite this feed would be; the maps can't be one.
     var favourite: Favourite? {
         switch self {
         case let .live(motorwayID): Favourite(motorwayID: motorwayID, feed: .live)
-        case .map: nil
+        case .map, .roadMap: nil
         case let .camera(camera, motorwayID): Favourite(motorwayID: motorwayID, feed: .camera(camera.id))
         }
     }
@@ -40,6 +43,7 @@ enum WebcamFeed: Identifiable, Hashable {
         switch self {
         case .live: "Live stream"
         case .map: "Traffic map"
+        case .roadMap: "Road map"
         case let .camera(camera, _): camera.title
         }
     }
@@ -48,6 +52,7 @@ enum WebcamFeed: Identifiable, Hashable {
         switch self {
         case .live: "play.tv.fill"
         case .map: "map.fill"
+        case .roadMap: "mappin.and.ellipse"
         case let .camera(camera, _): camera.symbol
         }
     }
@@ -102,6 +107,7 @@ struct WebcamsView: View {
     /// Contained by default, so the camera stays visible around the menu.
     @State private var background = BackgroundChoice.panel
     @State private var monitor = RoadMonitor()
+    @State private var traffic = TrafficMonitor()
     @State private var favourites = Favourites()
     @State private var showsFavouritesEditor = false
 
@@ -137,7 +143,9 @@ struct WebcamsView: View {
         var feeds: [WebcamFeed] = []
         if motorway.liveStream != nil { feeds.append(.live(motorwayID: motorway.id)) }
         if motorway.trafficMap != nil { feeds.append(.map(motorwayID: motorway.id)) }
-        return feeds + cameras(of: motorway).map { .camera($0, motorwayID: motorway.id) }
+        let cameras = cameras(of: motorway)
+        if cameras.contains(where: { $0.coordinate != nil }) { feeds.append(.roadMap(motorwayID: motorway.id)) }
+        return feeds + cameras.map { .camera($0, motorwayID: motorway.id) }
     }
 
     /// A favourite's feed, once its motorway's cameras are known.
@@ -192,11 +200,13 @@ struct WebcamsView: View {
                     title: showsFavourites ? "★ \(current.title)" : pages[current.id]?.title ?? current.title,
                     source: catalog.source.name,
                     feed: feed,
+                    cameras: cameras(of: current),
                     position: position,
                     report: currentReport,
                     error: loadError,
                     background: $background,
-                    manageFavourites: { showsFavouritesEditor = true }
+                    manageFavourites: { showsFavouritesEditor = true },
+                    showCamera: { feedID = $0.id }
                 ) {
                     Task { await load(current) }
                 }
@@ -211,6 +221,7 @@ struct WebcamsView: View {
             }
         }
         .environment(monitor)
+        .environment(traffic)
         .environment(favourites)
         .flickMenu(feeds, selection: $feedID, edges: .trailing, title: { menuTitle(for: $0) }, systemImage: { symbol(for: $0) })
         .flickMenuHome(.trailing, position: 0.4)
@@ -267,6 +278,9 @@ struct WebcamsView: View {
         .task(id: cameras) {
             await monitor.watch(cameras)
         }
+        .task(id: catalog.settings) {
+            await traffic.watch(catalog.settings)
+        }
         .task {
             await monitor.restore()
         }
@@ -313,10 +327,15 @@ struct WebcamsView: View {
         return monitor.report(for: camera)
     }
 
-    /// A camera's symbol in the menu shows its situation when something stands out.
+    /// A camera's symbol in the menu shows its situation when something stands out:
+    /// what the picture shows, or else an incident near it.
     private func symbol(for feed: WebcamFeed) -> String {
-        if case let .camera(camera, _) = feed, let symbol = monitor.report(for: camera)?.symbol {
+        guard case let .camera(camera, motorwayID) = feed else { return feed.symbol }
+        if let symbol = monitor.report(for: camera)?.symbol {
             return symbol
+        }
+        if let motorway = catalog.motorway(withID: motorwayID), let event = traffic.events(near: camera, on: motorway).first {
+            return event.symbol
         }
         return feed.symbol
     }
@@ -357,13 +376,17 @@ struct WebcamScreen: View {
     /// Who provides the pictures.
     let source: String
     let feed: WebcamFeed
+    /// The motorway's cameras, for the road map.
+    let cameras: [Webcam]
     let position: (index: Int, count: Int)?
     let report: RoadReport?
     let error: String?
     @Binding var background: BackgroundChoice
     let manageFavourites: () -> Void
+    let showCamera: (Webcam) -> Void
     let retry: () -> Void
     @Environment(RoadMonitor.self) private var monitor
+    @Environment(TrafficMonitor.self) private var traffic
     @Environment(Favourites.self) private var favourites
     @AppStorage(showsVehiclesKey) private var showsVehicles = true
     @AppStorage("analyzesLiveMotion") private var analyzesLiveMotion = true
@@ -389,6 +412,14 @@ struct WebcamScreen: View {
                         analyzes: false
                     )
                 }
+            case .roadMap:
+                TrafficMapView(
+                    motorway: motorway,
+                    cameras: cameras,
+                    events: traffic.events(on: motorway),
+                    signs: traffic.signs,
+                    showCamera: showCamera
+                )
             case let .camera(camera, _):
                 WebcamImage(camera: camera)
             }
@@ -396,8 +427,24 @@ struct WebcamScreen: View {
         .overlay(alignment: .top) {
             header
         }
+        .overlay(alignment: .bottomTrailing) {
+            if case let .camera(camera, _) = feed, let sign = traffic.sign(near: camera) {
+                TravelTimesCard(sign: sign)
+                    .padding()
+            }
+        }
         .foregroundStyle(.white)
         .tint(.white)
+    }
+
+    /// The incidents near the camera, or on the whole motorway for the other feeds.
+    @ViewBuilder
+    private var trafficBadge: some View {
+        if case let .camera(camera, _) = feed {
+            TrafficEventsBadge(events: traffic.events(near: camera, on: motorway), scope: "nearby")
+        } else {
+            TrafficEventsBadge(events: traffic.events(on: motorway), scope: "on \(motorway.code)")
+        }
     }
 
     private var detectsVehicles: Binding<Bool> {
@@ -448,6 +495,12 @@ struct WebcamScreen: View {
                     Text(source)
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.8))
+                case .roadMap:
+                    Text("Road map")
+                        .font(.title2.bold())
+                    Text("Cameras, incidents and travel times")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.8))
                 case let .camera(camera, _):
                     Text(camera.place)
                         .font(.title2.bold())
@@ -459,6 +512,8 @@ struct WebcamScreen: View {
                             .padding(.top, 4)
                     }
                 }
+                trafficBadge
+                    .padding(.top, 4)
                 if let error {
                     Button("Cameras unavailable. Retry", systemImage: "arrow.clockwise", action: retry)
                         .font(.footnote)

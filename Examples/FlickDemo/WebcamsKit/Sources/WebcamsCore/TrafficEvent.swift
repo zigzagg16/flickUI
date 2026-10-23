@@ -56,6 +56,40 @@ extension TrafficEvent {
         }
     }
 
+    /// The kind's name, such as "Roadworks".
+    public var title: String {
+        switch kind {
+        case .accident: "Accident"
+        case .breakdown: "Broken-down vehicle"
+        case .obstruction: "Obstruction"
+        case .roadworks: "Roadworks"
+        case .equipmentFault: "Equipment fault"
+        case .roadConditions: "Road conditions"
+        case .congestion: "Congestion"
+        case .other: "Incident"
+        }
+    }
+
+    /// How much the event matters to a driver, higher first: a closure, then what
+    /// happened today on the road, then works and faults.
+    public var importance: Int {
+        let kind = switch kind {
+        case .accident: 6
+        case .congestion: 5
+        case .breakdown, .obstruction, .roadConditions: 4
+        case .roadworks: 2
+        case .equipmentFault, .other: 1
+        }
+        return kind + (closesRoad ? 10 : 0)
+    }
+
+    /// "Road closed", "2 lanes closed", or `nil` when no lane is.
+    public var lanesSummary: String? {
+        if closesRoad { return "Road closed" }
+        guard let lanesRestricted, lanesRestricted > 0 else { return nil }
+        return lanesRestricted == 1 ? "1 lane closed" : "\(lanesRestricted) lanes closed"
+    }
+
     /// An SF Symbol for the kind of event.
     public var symbol: String {
         switch kind {
@@ -88,15 +122,20 @@ extension WebcamCatalog.Motorway {
     }
 }
 
-extension WebcamCatalog.Camera {
-    /// The events near this camera, nearest first; none when it has no coordinate.
-    public func nearbyEvents(in events: [TrafficEvent], within distance: Double = 2000) -> [TrafficEvent] {
-        guard let coordinate else { return [] }
-        return events
-            .compactMap { event in event.coordinate.map { (event, $0.distance(to: coordinate)) } }
+extension Array where Element == TrafficEvent {
+    /// The events within a distance of a coordinate, in metres, nearest first.
+    public func near(_ coordinate: WebcamCatalog.Coordinate, within distance: Double = 2000) -> [TrafficEvent] {
+        compactMap { event in event.coordinate.map { (event, $0.distance(to: coordinate)) } }
             .filter { $0.1 <= distance }
             .sorted { $0.1 < $1.1 }
             .map(\.0)
+    }
+}
+
+extension WebcamCatalog.Camera {
+    /// The events near this camera, nearest first; none when it has no coordinate.
+    public func nearbyEvents(in events: [TrafficEvent], within distance: Double = 2000) -> [TrafficEvent] {
+        coordinate.map { events.near($0, within: distance) } ?? []
     }
 }
 

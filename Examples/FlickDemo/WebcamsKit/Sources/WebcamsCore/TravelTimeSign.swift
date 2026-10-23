@@ -37,13 +37,18 @@ public struct TravelTimeSign: Codable, Hashable, Sendable, Identifiable {
     }
 }
 
+extension Array where Element == TravelTimeSign {
+    /// The sign nearest a coordinate, within a distance in metres.
+    public func nearest(to coordinate: WebcamCatalog.Coordinate, within distance: Double = 3000) -> TravelTimeSign? {
+        map { ($0, $0.coordinate.distance(to: coordinate)) }
+            .filter { $0.1 <= distance }
+            .min { $0.1 < $1.1 }?.0
+    }
+}
+
 extension WebcamCatalog.Camera {
     /// The travel time sign nearest this camera, within a distance in metres.
     public func nearestSign(in signs: [TravelTimeSign], within distance: Double = 3000) -> TravelTimeSign? {
-        guard let coordinate else { return nil }
-        return signs
-            .map { ($0, $0.coordinate.distance(to: coordinate)) }
-            .filter { $0.1 <= distance }
-            .min { $0.1 < $1.1 }?.0
+        coordinate.flatMap { signs.nearest(to: $0, within: distance) }
     }
 }

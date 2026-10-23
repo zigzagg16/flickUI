@@ -174,7 +174,9 @@ extension WebcamCatalog.Camera {
             place: place,
             direction: direction.map { "direction \($0)" } ?? "",
             imageURL: imageURL,
-            refreshInterval: refreshInterval ?? defaultRefresh
+            refreshInterval: refreshInterval ?? defaultRefresh,
+            coordinate: coordinate,
+            heading: heading
         )
     }
 }

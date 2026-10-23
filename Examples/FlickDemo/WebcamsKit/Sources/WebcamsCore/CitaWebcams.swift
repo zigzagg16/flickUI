@@ -14,13 +14,22 @@ public struct Webcam: Identifiable, Hashable, Sendable {
     public let imageURL: URL
     /// How often the picture is reloaded, in seconds; `nil` for the app's default.
     public var refreshInterval: TimeInterval?
+    /// Where the camera is, when the catalog knows.
+    public var coordinate: WebcamCatalog.Coordinate?
+    /// Which way it points on a map, in degrees clockwise from north.
+    public var heading: Double?
 
-    public init(id: String, place: String, direction: String, imageURL: URL, refreshInterval: TimeInterval? = nil) {
+    public init(
+        id: String, place: String, direction: String, imageURL: URL, refreshInterval: TimeInterval? = nil,
+        coordinate: WebcamCatalog.Coordinate? = nil, heading: Double? = nil
+    ) {
         self.id = id
         self.place = place
         self.direction = direction
         self.imageURL = imageURL
         self.refreshInterval = refreshInterval
+        self.coordinate = coordinate
+        self.heading = heading
     }
 
     /// "Sanem → Pétange".

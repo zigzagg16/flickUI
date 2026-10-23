@@ -17,6 +17,8 @@ struct WebcamEntity: AppEntity {
     let direction: String
     let imageURL: URL
     let refreshInterval: TimeInterval?
+    let coordinate: WebcamCatalog.Coordinate?
+    let heading: Double?
 
     init(_ camera: Webcam, on motorway: Motorway) {
         id = "\(motorway.id)/\(camera.id)"
@@ -27,6 +29,8 @@ struct WebcamEntity: AppEntity {
         direction = camera.direction
         imageURL = camera.imageURL
         refreshInterval = camera.refreshInterval
+        coordinate = camera.coordinate
+        heading = camera.heading
     }
 
     /// Shown until a camera is chosen: the catalog's first camera.
@@ -41,7 +45,10 @@ struct WebcamEntity: AppEntity {
     }
 
     var webcam: Webcam {
-        Webcam(id: cameraID, place: place, direction: direction, imageURL: imageURL, refreshInterval: refreshInterval)
+        Webcam(
+            id: cameraID, place: place, direction: direction, imageURL: imageURL, refreshInterval: refreshInterval,
+            coordinate: coordinate, heading: heading
+        )
     }
 
     var link: WebcamLink {
