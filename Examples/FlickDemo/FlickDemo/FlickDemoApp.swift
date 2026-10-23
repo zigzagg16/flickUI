@@ -4,7 +4,7 @@ import SwiftUI
 struct FlickDemoApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
         }
     }
 }

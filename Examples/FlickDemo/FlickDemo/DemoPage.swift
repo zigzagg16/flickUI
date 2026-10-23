@@ -60,6 +60,8 @@ struct PageView: View {
                 HStack {
                     Button("Open Menu", systemImage: "list.bullet") { menu.open() }
                     Button("Customize", systemImage: "slider.horizontal.3", action: onCustomize)
+                    AppSwitcher()
+                        .labelStyle(.iconOnly)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.white.opacity(0.25))
