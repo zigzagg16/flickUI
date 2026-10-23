@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 import WebcamsCore
 import WidgetKit
 
@@ -120,8 +119,8 @@ struct WebcamWidgetView: View {
     private var background: some View {
         ZStack {
             Color.black
-            if let data = entry.imageData, let image = UIImage(data: data) {
-                Image(uiImage: image)
+            if let data = entry.imageData, let image = Picture.image(from: data) {
+                Image(decorative: image, scale: 1)
                     .resizable()
                     .scaledToFill()
             } else {

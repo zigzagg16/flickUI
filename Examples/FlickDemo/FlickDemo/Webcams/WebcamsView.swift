@@ -1,6 +1,5 @@
 import flickUI
 import SwiftUI
-import UIKit
 import WebcamsCore
 import WebcamsVision
 
@@ -548,7 +547,7 @@ struct WebcamImage: View {
     /// Whether the road monitor reads the picture.
     var analyzes = true
 
-    @State private var image: UIImage?
+    @State private var image: CGImage?
     /// The camera `image` belongs to; the previous camera's image stays, dimmed, until the next one loads.
     @State private var imageCameraID: String?
     @State private var updated: Date?
@@ -566,7 +565,7 @@ struct WebcamImage: View {
     var body: some View {
         ZStack {
             if let image {
-                Image(uiImage: image)
+                Image(decorative: image, scale: 1)
                     .resizable()
                     .scaledToFit()
                     .overlay {
@@ -609,7 +608,7 @@ struct WebcamImage: View {
         while !Task.isCancelled {
             do {
                 let data = try await CitaWebcams.image(of: camera)
-                if let loaded = UIImage(data: data) {
+                if let loaded = Picture.image(from: data) {
                     withAnimation(.smooth) {
                         image = loaded
                         imageCameraID = camera.id

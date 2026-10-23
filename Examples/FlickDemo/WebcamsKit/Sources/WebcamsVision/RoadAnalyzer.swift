@@ -2,7 +2,6 @@
 
 import CoreGraphics
 import Foundation
-import ImageIO
 import Vision
 import WebcamsCore
 
@@ -30,7 +29,7 @@ public actor RoadAnalyzer {
     /// Analyzes a picture of a camera. `nil` if it can't be decoded.
     /// - Parameter vehicleModel: The vehicle detection model to use, or `nil` not to detect vehicles.
     public func analyze(_ data: Data, camera id: String, vehicleModel: URL?, at date: Date = .now) -> RoadReport? {
-        guard let image = Self.image(from: data), let statistics = ImageStatistics(image: image) else { return nil }
+        guard let image = Picture.image(from: data), let statistics = ImageStatistics(image: image) else { return nil }
 
         var memory = memories[id] ?? CameraMemory()
         memory.repeats = memory.lastImage == data ? memory.repeats + 1 : 0
@@ -65,11 +64,6 @@ public actor RoadAnalyzer {
             }
         }
         return report
-    }
-
-    public static func image(from data: Data) -> CGImage? {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
-        return CGImageSourceCreateImageAtIndex(source, 0, nil)
     }
 
     // MARK: Weather

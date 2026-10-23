@@ -1,7 +1,7 @@
 import AVFoundation
+import AVKit
 import Combine
 import SwiftUI
-import UIKit
 import WebcamsCore
 import WebcamsVision
 
@@ -10,7 +10,6 @@ struct LiveStreamView: View {
     let motorway: Motorway
 
     @State private var player = AVPlayer()
-    @State private var isMuted = true
     @State private var isPlaying = false
     @State private var failed = false
     @State private var attempt = 0
@@ -43,9 +42,6 @@ struct LiveStreamView: View {
         // Clear of the screen's header while the dashboard shows.
         .padding(.top, showsDashboard ? 150 : 0)
         .animation(.smooth, value: showsDashboard)
-        .onChange(of: isMuted, initial: true) { _, muted in
-            player.isMuted = muted
-        }
         .onReceive(player.publisher(for: \.timeControlStatus).receive(on: DispatchQueue.main)) { status in
             isPlaying = status == .playing
         }
@@ -62,7 +58,9 @@ struct LiveStreamView: View {
     }
 
     private var playerView: some View {
-        PlayerLayerView(player: player)
+        VideoPlayer(player: player)
+            // No playback controls: every touch reaches the menus.
+            .allowsHitTesting(false)
             .overlay {
                 if failed {
                     ContentUnavailableView {
@@ -76,14 +74,6 @@ struct LiveStreamView: View {
             }
             .overlay(alignment: .bottomLeading) {
                 HStack {
-                    Button {
-                        isMuted.toggle()
-                    } label: {
-                        Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                            .contentTransition(.symbolEffect(.replace))
-                            .roundButton()
-                    }
-                    .accessibilityLabel(isMuted ? "Unmute" : "Mute")
                     if analyzesMotion {
                         Button {
                             showsDashboard.toggle()
@@ -111,7 +101,8 @@ struct LiveStreamView: View {
             failed = true
             return
         }
-        isMuted = stream.startsMuted ?? true
+        // The streams have no sound.
+        player.isMuted = true
         let url = stream.url
         let item = AVPlayerItem(url: url)
         let output = AVPlayerItemVideoOutput(pixelBufferAttributes: [
@@ -317,30 +308,5 @@ private extension View {
         frame(width: 24, height: 24)
             .padding(10)
             .background(.ultraThinMaterial, in: Circle())
-    }
-}
-
-/// An `AVPlayerLayer` without playback controls, so every touch reaches the menus.
-struct PlayerLayerView: UIViewRepresentable {
-    let player: AVPlayer
-
-    func makeUIView(context: Context) -> PlayerUIView {
-        let view = PlayerUIView()
-        view.isUserInteractionEnabled = false
-        view.playerLayer.videoGravity = .resizeAspect
-        view.playerLayer.player = player
-        return view
-    }
-
-    func updateUIView(_ view: PlayerUIView, context: Context) {
-        view.playerLayer.player = player
-    }
-
-    final class PlayerUIView: UIView {
-        override class var layerClass: AnyClass { AVPlayerLayer.self }
-
-        var playerLayer: AVPlayerLayer {
-            layer as! AVPlayerLayer
-        }
     }
 }
