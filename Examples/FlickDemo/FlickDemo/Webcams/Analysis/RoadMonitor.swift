@@ -5,7 +5,46 @@ import Observation
 /// camera's situation at a glance.
 @MainActor @Observable
 final class RoadMonitor {
+    enum DetectorState: Equatable {
+        case off
+        case downloading
+        case on
+        case failed(String)
+    }
+
     private(set) var reports: [String: RoadReport] = [:]
+    private(set) var detector = DetectorState.off
+
+    var detectsVehicles: Bool {
+        detector == .on
+    }
+
+    private static let detectsVehiclesKey = "detectsVehicles"
+
+    /// Turns vehicle detection on, downloading its model the first time, or off.
+    /// The choice is remembered.
+    func setDetectsVehicles(_ isOn: Bool) async {
+        UserDefaults.standard.set(isOn, forKey: Self.detectsVehiclesKey)
+        guard isOn else {
+            detector = .off
+            return
+        }
+        guard detector != .on, detector != .downloading else { return }
+        detector = .downloading
+        do {
+            try await VehicleDetector.install()
+            detector = .on
+        } catch {
+            detector = .failed(error.localizedDescription)
+        }
+    }
+
+    /// Restores the remembered choice.
+    func restore() async {
+        if UserDefaults.standard.bool(forKey: Self.detectsVehiclesKey) {
+            await setDetectsVehicles(true)
+        }
+    }
 
     /// How often every camera is looked at again.
     static let interval: Duration = .seconds(120)
@@ -16,7 +55,7 @@ final class RoadMonitor {
 
     /// Analyzes a picture the app just loaded.
     func record(_ data: Data, for camera: Webcam) async {
-        if let report = await RoadAnalyzer.shared.analyze(data, camera: camera.id) {
+        if let report = await RoadAnalyzer.shared.analyze(data, camera: camera.id, detectsVehicles: detectsVehicles) {
             reports[camera.id] = report
         }
     }

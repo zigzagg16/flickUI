@@ -2,6 +2,9 @@ import flickUI
 import SwiftUI
 import UIKit
 
+/// The UserDefaults key of whether detected vehicles are drawn over the picture.
+private let showsVehiclesKey = "showsVehicleDetections"
+
 /// What the side menu shows: the motorway's live stream, its traffic map, then its cameras.
 enum WebcamFeed: Identifiable, Hashable {
     case live
@@ -115,6 +118,9 @@ struct WebcamsView: View {
         .task(id: cameras) {
             await monitor.watch(cameras)
         }
+        .task {
+            await monitor.restore()
+        }
     }
 
     private var currentReport: RoadReport? {
@@ -162,6 +168,8 @@ struct WebcamScreen: View {
     let error: String?
     @Binding var background: BackgroundChoice
     let retry: () -> Void
+    @Environment(RoadMonitor.self) private var monitor
+    @AppStorage(showsVehiclesKey) private var showsVehicles = true
 
     var body: some View {
         ZStack {
@@ -185,6 +193,14 @@ struct WebcamScreen: View {
         }
         .foregroundStyle(.white)
         .tint(.white)
+    }
+
+    private var detectsVehicles: Binding<Bool> {
+        Binding {
+            monitor.detectsVehicles || monitor.detector == .downloading
+        } set: { isOn in
+            Task { await monitor.setDetectsVehicles(isOn) }
+        }
     }
 
     private var header: some View {
@@ -221,14 +237,30 @@ struct WebcamScreen: View {
                         .font(.footnote)
                         .accessibilityHint(error)
                 }
+                switch monitor.detector {
+                case .downloading:
+                    Label("Downloading the vehicle model…", systemImage: "arrow.down.circle")
+                        .font(.footnote)
+                case let .failed(message):
+                    Label(message, systemImage: "exclamationmark.triangle.fill")
+                        .font(.footnote)
+                case .off, .on:
+                    EmptyView()
+                }
             }
             Spacer()
             Menu {
-                Picker("Menu background", selection: $background) {
+                Section("Analysis") {
+                    Toggle("Detect Vehicles", systemImage: "car.fill", isOn: detectsVehicles)
+                    Toggle("Show Detections", systemImage: "rectangle.dashed", isOn: $showsVehicles)
+                        .disabled(!monitor.detectsVehicles)
+                }
+                Picker("Menu Background", systemImage: "paintbrush.fill", selection: $background) {
                     ForEach(BackgroundChoice.allCases) { Text($0.title).tag($0) }
                 }
+                .pickerStyle(.menu)
             } label: {
-                Label("Menu background", systemImage: "paintbrush.fill")
+                Label("Options", systemImage: "ellipsis")
                     .labelStyle(.iconOnly)
                     .padding(6)
                     .background(.ultraThinMaterial, in: Circle())
@@ -268,6 +300,7 @@ struct WebcamImage: View {
     @State private var updated: Date?
     @State private var failed = false
     @Environment(RoadMonitor.self) private var monitor
+    @AppStorage(showsVehiclesKey) private var showsVehicles = true
 
     private static let refreshInterval = Duration.seconds(30)
 
@@ -281,6 +314,11 @@ struct WebcamImage: View {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
+                    .overlay {
+                        if isCurrent, analyzes, showsVehicles, let report = monitor.report(for: camera) {
+                            VehicleBoxes(boxes: report.vehicleBoxes)
+                        }
+                    }
                     .opacity(isCurrent ? 1 : 0.4)
             }
             if !isCurrent && !failed {
@@ -335,6 +373,25 @@ struct WebcamImage: View {
             }
             try? await Task.sleep(for: Self.refreshInterval)
         }
+    }
+}
+
+/// The detected vehicles, drawn over the picture.
+struct VehicleBoxes: View {
+    let boxes: [CGRect]
+
+    var body: some View {
+        GeometryReader { proxy in
+            ForEach(boxes.indices, id: \.self) { index in
+                let box = boxes[index]
+                Rectangle()
+                    .strokeBorder(.yellow, lineWidth: 1.5)
+                    .frame(width: box.width * proxy.size.width, height: box.height * proxy.size.height)
+                    .offset(x: box.minX * proxy.size.width, y: box.minY * proxy.size.height)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 

@@ -71,6 +71,7 @@ struct RoadReport: Codable, Hashable, Sendable {
         }
         var parts: [String] = []
         if let traffic { parts.append(traffic.title) }
+        if let vehicles { parts.append(vehicles == 1 ? "1 vehicle" : "\(vehicles) vehicles") }
         parts += Weather.allCases.filter(weather.contains).map(\.title)
         if visibility != .good { parts.append(visibility.title) }
         if light != .day { parts.append(light.title) }
