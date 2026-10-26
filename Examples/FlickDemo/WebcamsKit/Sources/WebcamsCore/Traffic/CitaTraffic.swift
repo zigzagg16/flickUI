@@ -9,9 +9,13 @@ import FoundationXML
 /// Reads the traffic the road operator publishes as open data on data.public.lu:
 /// incidents and roadworks, and the travel times on the overhead signs.
 ///
-/// Both change by the minute, so the app reads them live from the addresses in the
-/// catalog's ``WebcamCatalog/Settings``.
+/// Both change by the minute, so the app reads them live. Everything about traffic is
+/// in this `Traffic` folder; the rest of the package doesn't use it, so it can be
+/// deleted with the app's own `Traffic` folder.
 public enum CitaTraffic {
+    /// How often the app reloads the feeds, in seconds.
+    public static let refreshInterval: TimeInterval = 120
+
     /// The DATEX II v3.6 situation records: incidents and roadworks on the motorways.
     public static let eventsURL = URL(string: "https://cita.lu/info_trafic/datex/situationrecord36")!
     /// The travel times on the overhead signs, as KML.

@@ -95,12 +95,6 @@ public struct WebcamCatalog: Codable, Hashable, Sendable {
         public var imageRefreshInterval: TimeInterval?
         /// The vehicle detection model to download, a Core ML `.mlmodel`.
         public var vehicleModelURL: URL?
-        /// Incidents and roadworks, a DATEX II v3 situation publication for ``CitaTraffic``.
-        public var trafficEventsURL: URL?
-        /// Travel times on the overhead signs, a KML file for ``CitaTraffic``.
-        public var travelTimesURL: URL?
-        /// How often to reload the events and travel times, in seconds.
-        public var trafficRefreshInterval: TimeInterval?
     }
 }
 

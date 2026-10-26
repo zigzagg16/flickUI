@@ -2,41 +2,31 @@ import MapKit
 import SwiftUI
 import WebcamsCore
 
-/// The road operator's live traffic: incidents and roadworks, and the travel times on
-/// the overhead signs, reloaded while the webcams are on screen.
+// The road operator's live traffic: incidents and roadworks, and the travel times on
+// the overhead signs. Everything is in this folder and WebcamsKit's `Traffic` folder;
+// the Webcams screens use it in a few lines marked `// Traffic`, so deleting both
+// folders and those lines removes it.
+
+/// Reloads the traffic feeds while the webcams are on screen. Shared, so the menu,
+/// the screens and the map read the same data.
 @Observable
 @MainActor
 final class TrafficMonitor {
+    static let shared = TrafficMonitor()
+
     private(set) var events: [TrafficEvent] = []
     private(set) var signs: [TravelTimeSign] = []
-    private(set) var updated: Date?
 
-    /// For catalogs without their own interval.
-    private static let defaultRefreshInterval: TimeInterval = 120
-
-    /// Reloads the feeds the catalog names until cancelled. A feed that fails keeps
-    /// what it read before.
-    func watch(_ settings: WebcamCatalog.Settings) async {
-        guard settings.trafficEventsURL != nil || settings.travelTimesURL != nil else { return }
+    /// Reloads until cancelled. A feed that fails keeps what it read before.
+    func watch() async {
         while !Task.isCancelled {
-            async let events = Self.events(from: settings.trafficEventsURL)
-            async let signs = Self.signs(from: settings.travelTimesURL)
+            async let events = try? CitaTraffic.events()
+            async let signs = try? CitaTraffic.travelTimes()
             let (loadedEvents, loadedSigns) = await (events, signs)
             if let loadedEvents { self.events = loadedEvents }
             if let loadedSigns { self.signs = loadedSigns }
-            if loadedEvents != nil || loadedSigns != nil { updated = .now }
-            try? await Task.sleep(for: .seconds(settings.trafficRefreshInterval ?? Self.defaultRefreshInterval))
+            try? await Task.sleep(for: .seconds(CitaTraffic.refreshInterval))
         }
-    }
-
-    private nonisolated static func events(from url: URL?) async -> [TrafficEvent]? {
-        guard let url else { return nil }
-        return try? await CitaTraffic.events(from: url)
-    }
-
-    private nonisolated static func signs(from url: URL?) async -> [TravelTimeSign]? {
-        guard let url else { return nil }
-        return try? await CitaTraffic.travelTimes(from: url)
     }
 
     /// The events under way on a motorway, most important first.
@@ -52,6 +42,12 @@ final class TrafficMonitor {
 
     func sign(near camera: Webcam) -> TravelTimeSign? {
         camera.coordinate.flatMap { signs.nearest(to: $0) }
+    }
+
+    /// The symbol of the most important incident near a camera feed, for the menu.
+    func symbol(for feed: WebcamFeed, in catalog: WebcamCatalog) -> String? {
+        guard case let .camera(camera, motorwayID) = feed, let motorway = catalog.motorway(withID: motorwayID) else { return nil }
+        return events(near: camera, on: motorway).first?.symbol
     }
 
     private static func sorted(_ events: [TrafficEvent]) -> [TrafficEvent] {
@@ -75,15 +71,28 @@ extension TrafficEvent {
     }
 }
 
-/// The incidents near a camera, or on a motorway: the most important one, and how
-/// many more. Tapping it lists them all.
-struct TrafficEventsBadge: View {
-    let events: [TrafficEvent]
-    /// "nearby", or "on A13".
-    let scope: String
+/// For the screen's header: the incidents near the camera, or on the whole motorway
+/// for the other feeds. Tapping it lists them all.
+struct TrafficBadge: View {
+    let feed: WebcamFeed
+    let motorway: Motorway
     @State private var showsList = false
 
+    private var events: [TrafficEvent] {
+        if case let .camera(camera, _) = feed {
+            return TrafficMonitor.shared.events(near: camera, on: motorway)
+        }
+        return TrafficMonitor.shared.events(on: motorway)
+    }
+
+    /// "nearby", or "on A13".
+    private var scope: String {
+        if case .camera = feed { return "nearby" }
+        return "on \(motorway.code)"
+    }
+
     var body: some View {
+        let events = events
         if let first = events.first {
             Button {
                 showsList = true
@@ -101,6 +110,7 @@ struct TrafficEventsBadge: View {
                 .background(.ultraThinMaterial, in: Capsule())
             }
             .buttonStyle(.plain)
+            .padding(.top, 4)
             .accessibilityLabel(Text("\(events.count) traffic events \(scope)"))
             .sheet(isPresented: $showsList) {
                 TrafficEventsList(events: events, title: "Traffic \(scope)")
@@ -170,7 +180,18 @@ struct TrafficEventRow: View {
     }
 }
 
-/// The overhead sign nearest a camera, with its travel times.
+/// For the bottom of a camera's screen: the travel times on the nearest overhead sign.
+struct TravelTimesOverlay: View {
+    let feed: WebcamFeed
+
+    var body: some View {
+        if case let .camera(camera, _) = feed, let sign = TrafficMonitor.shared.sign(near: camera) {
+            TravelTimesCard(sign: sign)
+                .padding()
+        }
+    }
+}
+
 struct TravelTimesCard: View {
     let sign: TravelTimeSign
 
@@ -197,8 +218,54 @@ struct TravelTimesCard: View {
     }
 }
 
+/// For the screen's header: opens the motorway's road map. Tapping a camera on the map
+/// shows it, through the app's webcam link.
+struct TrafficMapButton: View {
+    let motorway: Motorway
+    @State private var showsMap = false
+    @Environment(\.openURL) private var openURL
+
+    private var cameras: [Webcam] {
+        motorway.enabledCameras.map { $0.webcam() }
+    }
+
+    var body: some View {
+        if cameras.contains(where: { $0.coordinate != nil }) {
+            Button {
+                showsMap = true
+            } label: {
+                Image(systemName: "map")
+                    .padding(6)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
+            .accessibilityLabel("Road Map")
+            .fullScreenCover(isPresented: $showsMap) {
+                NavigationStack {
+                    TrafficMapView(
+                        motorway: motorway,
+                        cameras: cameras,
+                        events: TrafficMonitor.shared.events(on: motorway),
+                        signs: TrafficMonitor.shared.signs
+                    ) { camera in
+                        showsMap = false
+                        openURL(WebcamLink(motorwayID: motorway.id, cameraID: camera.id).url)
+                    }
+                    .ignoresSafeArea(edges: .bottom)
+                    .navigationTitle(motorway.title)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        Button("Done") { showsMap = false }
+                    }
+                }
+                .foregroundStyle(.primary)
+                .tint(.accentColor)
+            }
+        }
+    }
+}
+
 /// A motorway on a map: its cameras pointing the way they look, the incidents on it,
-/// and the travel time signs. Tapping a camera shows it.
+/// and the travel time signs along it.
 struct TrafficMapView: View {
     let motorway: Motorway
     let cameras: [Webcam]

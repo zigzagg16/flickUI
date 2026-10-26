@@ -23,7 +23,7 @@ it worse. Show averages per carriageway only, never per vehicle.
 - Siri and Shortcuts: "How's the A13?", building on the widget's camera entity.
 - Live Activity for a jam on the route.
 - Timelapse of the last hour per camera.
-- cita.lu incidents, roadworks, travel times and truck parking as menu items.
+- cita.lu truck parking, from its DATEX II parking feeds.
 - Map of the cameras (coordinates in the catalog).
 - Apple Watch complication, CarPlay status.
 - History per camera: "busier than usual" against past reports at that hour.
